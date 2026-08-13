@@ -66,10 +66,10 @@ int main () {
     // Duration of the process
     timetaken = (end.tv_sec - start.tv_sec) * 1e9; //* 1e9 to nanoseconds
     //include nano seconds
-    timetaken = (timetaken + (end.tv_nsec - start.tv_nsec)); // In nanoseconds
+    timetaken = (timetaken + (end.tv_nsec - start.tv_nsec)) / 1e9; // turn into seconds
     
     //%lf is for double
-    printf("Time taken: %lf nanoseconds\n", timetaken);
+    printf("Time taken: %lf seconds\n", timetaken);
 
     return 0;
 }
