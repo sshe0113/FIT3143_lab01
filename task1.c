@@ -61,7 +61,7 @@ int main () {
     timetaken = (timetaken + (end.tv_nsec - start.tv_nsec)) / 1e9; // turn into seconds
     
     //%lf is for double computation time
-    printf("Time taken: %lf seconds\n", timetaken);
+    printf("Time taken to compute: %lf seconds\n", timetaken);
 
     clock_gettime(CLOCK_MONOTONIC, &startW);
     // Output result
