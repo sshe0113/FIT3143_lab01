@@ -47,14 +47,11 @@ int main () {
                 is_prime = 0;
                 break;
             }
-
         }
-
         if (is_prime){
             //Print formatted data to a specific output stream.
             fprintf(output, "%d\n", k);
         }
-
     }
 
     // Close the file if open.
