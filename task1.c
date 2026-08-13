@@ -69,7 +69,7 @@ int main () {
     timetaken = (timetaken + (end.tv_nsec - start.tv_nsec)); // In nanoseconds
     
     //%lf is for double
-    printf("Time taken: %lf seconds\n", timetaken);
+    printf("Time taken: %lf nanoseconds\n", timetaken);
 
     return 0;
 }
