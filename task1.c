@@ -63,6 +63,7 @@ int main () {
     //%lf is for double computation time
     printf("Time taken: %lf seconds\n", timetaken);
 
+    clock_gettime(CLOCK_MONOTONIC, &startW);
     // Output result
     if (n < 100) {
 
@@ -76,22 +77,21 @@ int main () {
     } else {
 
         // Large n output to the file
-        clock_gettime(CLOCK_MONOTONIC, &startW);
 
         WritePrimesToFile("task1_output.txt", primes, count);
 
-        clock_gettime(CLOCK_MONOTONIC, &endW);
-
-        printf("Result has been written to task1_output.txt\n");
-
-        // Duration of the computation process
-        time_write = (endW.tv_sec - startW.tv_sec) * 1e9; //* 1e9 to nanoseconds
-        //include nano seconds
-        time_write = (time_write + (endW.tv_nsec - startW.tv_nsec)) / 1e9; // turn into seconds
         
-        //%lf is for double computation time
-        printf("Time taken to write: %lf seconds\n", time_write);
+        printf("Result has been written to task1_output.txt\n");
+        
     }
+    clock_gettime(CLOCK_MONOTONIC, &endW);
+    // Duration of the computation process
+    time_write = (endW.tv_sec - startW.tv_sec) * 1e9; //* 1e9 to nanoseconds
+    //include nano seconds
+    time_write = (time_write + (endW.tv_nsec - startW.tv_nsec)) / 1e9; // turn into seconds
+    
+    //%lf is for double computation time
+    printf("Time taken to write: %lf seconds\n", time_write);
 
     // Free allocated memory
     free(primes);
