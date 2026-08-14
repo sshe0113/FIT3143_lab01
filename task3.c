@@ -41,23 +41,36 @@ int main () {
     {
         int thread_id = omp_get_thread_num();
 
-        // Find all prime number < n with way of cyclic partitioning 
+        // Find all prime numbers < n with cyclic partitioning
         for (int k = 2 + thread_id; k < n; k += num_threads) {
 
             // Boolean variable
-            int is_prime = 1; //1 True, 0 False
+            int is_prime = 1; // 1 = True, 0 = False
 
-            // Check from 2 until sqrt k 
-            for (int i = 2; i <= sqrt(k); i++) {
+            // 2 is the only even prime number
+            if (k == 2) {
+                is_prime = 1;
+            }
+            // Other even numbers are not prime
+            else if (k % 2 == 0) {
+                is_prime = 0;
+            }
+            // Only check odd numbers
+            else {
+                // Check from 3 until sqrt(k), skipping even numbers
+                int range = (int)sqrt(k);
 
-                //if k has a divisor then k not a prime
-                if (k % i == 0){
-                    is_prime = 0;
-                    break;
+                for (int i = 3; i <= range; i += 2) {
+
+                    // If k has a divisor, k is not prime
+                    if (k % i == 0) {
+                        is_prime = 0;
+                        break;
+                    }
                 }
             }
-            
-            // Use boolean 1/0 to indicate it was a prime or not
+
+            // Store whether k is prime
             primesArray[k] = is_prime;
         }
     }
@@ -91,7 +104,7 @@ int main () {
         // Large n output to the file
         WritePrimesToFile("task3_output.txt", primesArray, n);
 
-        printf("Result has been written to task1_output.txt\n");
+        printf("Result has been written to task3_output.txt\n");
         
     }
 
