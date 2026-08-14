@@ -1,6 +1,6 @@
 ///////////////////////////////////////
 //
-// Cyclic Partitioning Approach
+// Cyclic Partitioning
 //
 ///////////////////////////////////////
 
@@ -45,6 +45,7 @@ int main()
     // Array allocation
     prime_array = (bool *)calloc(n, sizeof(bool));
     int *primes = (int *)malloc(n * sizeof(int));
+    
     if (prime_array == NULL || primes == NULL)
     {
         printf("Memory allocation failed.\n");
