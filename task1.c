@@ -1,7 +1,8 @@
 //////////////////////////////////////
 //  Author  :   Shee Seng Cheng
 //              Tay Chee Hsian
-//  Start_dt:   13/08/2026
+//  Start Date:   13/08/2026
+//  TASK 1
 //////////////////////////////////////
 
 #include <stdio.h>
