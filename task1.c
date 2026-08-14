@@ -96,6 +96,7 @@ int main () {
     // Free allocated memory
     free(primes);
 
+    printf("Overall time taken: %1f seconds\n", timetaken + time_write);
     return 0;
 }
 
