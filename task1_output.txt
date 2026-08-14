@@ -1,4 +1,3 @@
-All prime number lesser then 100 was: 
 2
 3
 5
