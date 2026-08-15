@@ -29,46 +29,44 @@ int main () {
     for (n = 10000000; n <= 40000000; n += 1000000) {
         
         // Allocate memory to store primes
-        int *primes = malloc(n * sizeof(int));
+        bool *primesArray = (bool *)calloc(n * sizeof(int));
         if (primes == NULL) {
             printf("Memory allocation failed for n = %d.\n", n);
             return 1;
         }
-        
-        int count = 0;
 
         // Start timing only the computation
         // Get current clock time. (Monotonic = always move foward)
         clock_gettime(CLOCK_MONOTONIC, &start); 
         
         // List all prime numbers until n
-    for (int k = 2; k < n; k++) {
+        for (int k = 2; k < n; k++) {
 
-        // 2 is the only even prime number
-        if (k == 2) {
-            primeArray[k] = true;
-        }
-        // Other even numbers are not prime
-        else if (k % 2 == 0) {
-            primeArray[k] = false;
-        }
-        // Only check odd numbers
-        else {
-            bool isPrime = true;
-            // Check from 3 until sqrt(k), skipping even numbers
-            int range = (int)sqrt(k);
-
-            for (int i = 3; i <= range; i += 2) {
-                // If k has a divisor, k is not prime
-                if (k % i == 0) {
-                    isPrime = false;
-                    break;
-                }
+            // 2 is the only even prime number
+            if (k == 2) {
+                primeArray[k] = true;
             }
-            // Store whether k is prime
-            primeArray[k] = isPrime;
+            // Other even numbers are not prime
+            else if (k % 2 == 0) {
+                primeArray[k] = false;
+            }
+            // Only check odd numbers
+            else {
+                bool isPrime = true;
+                // Check from 3 until sqrt(k), skipping even numbers
+                int range = (int)sqrt(k);
+
+                for (int i = 3; i <= range; i += 2) {
+                    // If k has a divisor, k is not prime
+                    if (k % i == 0) {
+                        isPrime = false;
+                        break;
+                    }
+                }
+                // Store whether k is prime
+                primeArray[k] = isPrime;
+            }
         }
-    }
 
         // Get current clock time (end for computation)
         clock_gettime(CLOCK_MONOTONIC, &end);

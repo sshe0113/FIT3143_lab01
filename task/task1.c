@@ -26,7 +26,6 @@ int main () {
 
     // Allocate memory to store primes
     bool *primesArray = (bool *)calloc(n * sizeof(int));
-    int count = 0;
 
     //Start timing only the computation
     // Get current clock time. (Monotonic = always move foward)
