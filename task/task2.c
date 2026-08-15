@@ -14,8 +14,8 @@
 
 // Global variables
 int n;
-int num_threads;
-bool *prime_array;  // A boolean array to record prime numbers
+int numThreads;
+bool *primeArray;  // A boolean array to record prime numbers
 
 // Function prototype
 void *find_prime(void *arg);
@@ -35,7 +35,7 @@ int main()
     }
 
     printf("Enter number of threads: ");
-    if (scanf("%d", &num_threads) != 1 || num_threads < 1)
+    if (scanf("%d", &numThreads) != 1 || numThreads < 1)
     {
         printf("Invalid thread count.\n");
         return 1;
@@ -44,32 +44,32 @@ int main()
     clock_gettime(CLOCK_MONOTONIC, &start);
 
     // Array allocation
-    prime_array = (bool *)calloc(n, sizeof(bool));
+    primeArray = (bool *)calloc(n, sizeof(bool));
     int *primes = (int *)malloc(n * sizeof(int));
     
-    if (prime_array == NULL || primes == NULL)
+    if (primeArray == NULL || primes == NULL)
     {
         printf("Memory allocation failed.\n");
         return 1;
     }
 
     // Assign the memory space to all threads
-    pthread_t *threads = (pthread_t *)malloc(num_threads * sizeof(pthread_t));
+    pthread_t *threads = (pthread_t *)malloc(numThreads * sizeof(pthread_t));
     // Assign a unique id to each thread
-    int *thread_ids = (int *)malloc(num_threads * sizeof(int));
+    int *threadIDs = (int *)malloc(numThreads * sizeof(int));
 
     // Computation
     clock_gettime(CLOCK_MONOTONIC, &startComp);
 
     // Create and activate threads
-    for (int i = 0; i < num_threads; i++)
+    for (int i = 0; i < numThreads; i++)
     {
-        thread_ids[i] = i;
-        pthread_create(&threads[i], NULL, find_prime, &thread_ids[i]);
+        threadIDs[i] = i;
+        pthread_create(&threads[i], NULL, find_prime, &threadIDs[i]);
     }
 
     // Waiting all sub-threads complete the computation
-    for (int i = 0; i < num_threads; i++)
+    for (int i = 0; i < numThreads; i++)
     {
         pthread_join(threads[i], NULL);
     }
@@ -78,7 +78,7 @@ int main()
     int count = 0;
     for (int k = 2; k < n; k++)
     {
-        if (prime_array[k])
+        if (primeArray[k])
         {
             primes[count] = k;
             count++;
@@ -110,10 +110,10 @@ int main()
     printf("Overall Time: %lf seconds\n", timetaken);
 
     // Free allocated memory
-    free(prime_array);
+    free(primeArray);
     free(primes);
     free(threads);
-    free(thread_ids);
+    free(threadIDs);
 
     return 0;
 }
@@ -121,32 +121,32 @@ int main()
 // Thread function
 void *find_prime(void *arg)
 {
-    int thread_id = *(int *)arg;
+    int threadID = *(int *)arg;
 
     // Instead of giving each thread one continuous chunk of words,
-    // distribute the work by taking every num_threads-th item.
-    for (int k = 2 + thread_id; k < n; k += num_threads)
+    // distribute the work by taking every numThreads-th item.
+    for (int k = 2 + threadID; k < n; k += numThreads)
     {
         if (k == 2)  // 2 is the only even prime number
         {
-            prime_array[k] = true;
+            primeArray[k] = true;
         } 
         else if (k % 2 != 0)  // Handles the case when k is odd number
         {
-            bool is_prime = true;
+            bool isPrime = true;
             // Only needs to check whether it is divisible by any integer between 2 and sqrt(k)
             int range = (int)sqrt(k);
             for (int i = 3; i <= range; i += 2)  // Jump 2 steps to save time
             {
                 if (k % i == 0)
                 {
-                    is_prime = false;
+                    isPrime = false;
                     break;
                 }
             }
-            if (is_prime)
+            if (isPrime)
             {
-                prime_array[k] = true;
+                primeArray[k] = true;
             }
         }
     }
