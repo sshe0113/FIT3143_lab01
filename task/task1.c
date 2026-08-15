@@ -9,11 +9,12 @@
 #include <math.h>
 #include <time.h>
 #include <stdlib.h> 
+#include <stdbool.h>
 
 // To notify the program that there is a function called WritePrimesToFile, 
 // and this is what its parameters look like. 
 // The actual implementation will come later.
-void WritePrimesToFile(char *filename, int *primes, int count);
+void WritePrimesToFile(char *filename, bool *primeArray, int n);
 
 int main () {
     int n;
@@ -25,7 +26,7 @@ int main () {
     scanf("%d", &n); //Store the input to the address of 'n'
 
     // Allocate memory to store primes
-    bool *primesArray = (bool *)calloc(n * sizeof(int));
+    bool *primeArray = (bool *)calloc(n, sizeof(bool));
 
     //Start timing only the computation
     // Get current clock time. (Monotonic = always move foward)
@@ -84,7 +85,7 @@ int main () {
         }
     } else {
         // Large n output to the file
-        WritePrimesToFile("task1_output.txt", primes, count);
+        WritePrimesToFile("task1_output.txt", primeArray, n);
     }
     clock_gettime(CLOCK_MONOTONIC, &endW);
 
@@ -98,13 +99,13 @@ int main () {
     printf("Overall Time: %1f seconds\n", timetaken + timeWrite);
 
     // Free allocated memory
-    free(primes);
+    free(primeArray);
 
     return 0;
 }
 
 //Helper function to write to the file (idea from lab 3 "Vector_Cell_Product.c")
-void WritePrimesToFile(char *filename, int *primes, int count)
+void WritePrimesToFile(char *filename, bool *primeArray, int n)
 {
     FILE *pFile = fopen(filename, "w"); //pFile is a pointer to a file stream
 

@@ -9,6 +9,7 @@
 #include <math.h>
 #include <time.h>
 #include <stdlib.h> 
+#include <stdbool.h>
 
 int main () {
     int n;
@@ -29,8 +30,8 @@ int main () {
     for (n = 10000000; n <= 40000000; n += 1000000) {
         
         // Allocate memory to store primes
-        bool *primesArray = (bool *)calloc(n * sizeof(int));
-        if (primes == NULL) {
+        bool *primeArray = (bool *)calloc(n, sizeof(int));
+        if (primeArray == NULL) {
             printf("Memory allocation failed for n = %d.\n", n);
             return 1;
         }
@@ -83,7 +84,7 @@ int main () {
         fprintf(result_file, "%lf\n", timetaken);
 
         // Free allocated memory before next iteration
-        free(primes);
+        free(primeArray);
     }
 
     fclose(result_file);
