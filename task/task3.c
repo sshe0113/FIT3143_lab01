@@ -2,7 +2,7 @@
 //  Author  :   Shee Seng Cheng
 //              Tay Chee Hsian
 //  Start Date:   15/08/2026
-//  Task 3 – OpenMP - Finding Prime Numbers
+//  TASK 3
 //////////////////////////////////////
 
 #include <stdio.h>
@@ -11,9 +11,7 @@
 #include <stdlib.h> 
 #include <omp.h>
 
-// To notify the program that there is a function called WritePrimesToFile, 
-// and this is what its parameters look like. 
-// The actual implementation will come later.
+// Function prototype
 void WritePrimesToFile(char *filename, int *primesArray, int n);
 
 int main () {
@@ -69,7 +67,6 @@ int main () {
                     }
                 }
             }
-
             // Store whether k is prime
             primesArray[k] = is_prime;
         }
@@ -87,9 +84,9 @@ int main () {
     printf("Time taken to compute: %lf seconds\n", timetaken);
 
     clock_gettime(CLOCK_MONOTONIC, &startW);
+    
     // Output result
     if (n < 100) {
-
         // Small n output to stdout (terminal)
         printf("All prime numbers less than %d are:\n", n);
         
