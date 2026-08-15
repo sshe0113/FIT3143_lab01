@@ -42,25 +42,33 @@ int main () {
         clock_gettime(CLOCK_MONOTONIC, &start); 
         
         // List all prime numbers until n
-        for (int k = 2; k < n; k++) {
-            // Boolean variable
-            int is_prime = 1; //1 True, 0 False
+    for (int k = 2; k < n; k++) {
 
-            // Check from 2 until sqrt k 
-            for (int i = 2; i <= sqrt(k); i++) {
+        // 2 is the only even prime number
+        if (k == 2) {
+            primeArray[k] = true;
+        }
+        // Other even numbers are not prime
+        else if (k % 2 == 0) {
+            primeArray[k] = false;
+        }
+        // Only check odd numbers
+        else {
+            bool isPrime = true;
+            // Check from 3 until sqrt(k), skipping even numbers
+            int range = (int)sqrt(k);
 
-                //if k has a divisor then k not a prime
-                if (k % i == 0){
-                    is_prime = 0;
+            for (int i = 3; i <= range; i += 2) {
+                // If k has a divisor, k is not prime
+                if (k % i == 0) {
+                    isPrime = false;
                     break;
                 }
             }
-            if (is_prime){
-                // Store prime in memory
-                primes[count] = k;
-                count ++;
-            }
+            // Store whether k is prime
+            primeArray[k] = isPrime;
         }
+    }
 
         // Get current clock time (end for computation)
         clock_gettime(CLOCK_MONOTONIC, &end);
