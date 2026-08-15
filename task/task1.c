@@ -25,8 +25,7 @@ int main () {
     scanf("%d", &n); //Store the input to the address of 'n'
 
     // Allocate memory to store primes
-    int *primes = malloc(n * sizeof(int));
-    int count = 0;
+    bool *primesArray = (bool *)calloc(n * sizeof(int));
 
     //Start timing only the computation
     // Get current clock time. (Monotonic = always move foward)
@@ -34,22 +33,30 @@ int main () {
     
     // List all prime numbers until n
     for (int k = 2; k < n; k++) {
-        // Boolean variable
-        int isPrime = 1; //1 True, 0 False
 
-        // Check from 2 until sqrt k 
-        for (int i = 2; i <= sqrt(k); i++) {
-
-            //if k has a divisor then k not a prime
-            if (k % i == 0){
-                isPrime = 0;
-                break;
-            }
+        // 2 is the only even prime number
+        if (k == 2) {
+            primeArray[k] = true;
         }
-        if (isPrime){
-            // Store prime in memory
-            primes[count] = k;
-            count ++;
+        // Other even numbers are not prime
+        else if (k % 2 == 0) {
+            primeArray[k] = false;
+        }
+        // Only check odd numbers
+        else {
+            bool isPrime = true;
+            // Check from 3 until sqrt(k), skipping even numbers
+            int range = (int)sqrt(k);
+
+            for (int i = 3; i <= range; i += 2) {
+                // If k has a divisor, k is not prime
+                if (k % i == 0) {
+                    isPrime = false;
+                    break;
+                }
+            }
+            // Store whether k is prime
+            primeArray[k] = isPrime;
         }
     }
 
@@ -68,11 +75,12 @@ int main () {
 
     // Output result
     if (n < 100) {
-        // Small n output to stdout (terminal)
         printf("All prime numbers less than %d are:\n", n);
-
-        for (int i = 0; i < count; i++) {
-            printf("%d\n", primes[i]);
+        // Serial loop to ensure sorted
+        for (int k = 2; k < n; k++) {
+            if (primeArray[k]){
+                printf("%d\n", k);
+            }
         }
     } else {
         // Large n output to the file
@@ -100,8 +108,11 @@ void WritePrimesToFile(char *filename, int *primes, int count)
 {
     FILE *pFile = fopen(filename, "w"); //pFile is a pointer to a file stream
 
-    for (int i = 0; i < count; i++) {
-        fprintf(pFile, "%d\n", primes[i]);
+    // Start from 2 to skip unnecessary checks for 0 and 1
+    for (int i = 2; i < n; i++) {
+        if(primeArray[i]){
+            fprintf(pFile, "%d\n", i);
+        }
     }
 
     fclose(pFile);

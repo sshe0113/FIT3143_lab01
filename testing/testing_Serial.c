@@ -29,13 +29,11 @@ int main () {
     for (n = 10000000; n <= 40000000; n += 1000000) {
         
         // Allocate memory to store primes
-        int *primes = malloc(n * sizeof(int));
+        bool *primesArray = (bool *)calloc(n * sizeof(int));
         if (primes == NULL) {
             printf("Memory allocation failed for n = %d.\n", n);
             return 1;
         }
-        
-        int count = 0;
 
         // Start timing only the computation
         // Get current clock time. (Monotonic = always move foward)
@@ -43,22 +41,30 @@ int main () {
         
         // List all prime numbers until n
         for (int k = 2; k < n; k++) {
-            // Boolean variable
-            int is_prime = 1; //1 True, 0 False
 
-            // Check from 2 until sqrt k 
-            for (int i = 2; i <= sqrt(k); i++) {
-
-                //if k has a divisor then k not a prime
-                if (k % i == 0){
-                    is_prime = 0;
-                    break;
-                }
+            // 2 is the only even prime number
+            if (k == 2) {
+                primeArray[k] = true;
             }
-            if (is_prime){
-                // Store prime in memory
-                primes[count] = k;
-                count ++;
+            // Other even numbers are not prime
+            else if (k % 2 == 0) {
+                primeArray[k] = false;
+            }
+            // Only check odd numbers
+            else {
+                bool isPrime = true;
+                // Check from 3 until sqrt(k), skipping even numbers
+                int range = (int)sqrt(k);
+
+                for (int i = 3; i <= range; i += 2) {
+                    // If k has a divisor, k is not prime
+                    if (k % i == 0) {
+                        isPrime = false;
+                        break;
+                    }
+                }
+                // Store whether k is prime
+                primeArray[k] = isPrime;
             }
         }
 

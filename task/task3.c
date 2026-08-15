@@ -9,66 +9,70 @@
 #include <math.h>
 #include <time.h>
 #include <stdlib.h> 
+#include <stdbool.h>
 #include <omp.h>
 
 // Function prototype
-void WritePrimesToFile(char *filename, int *primesArray, int n);
+void WritePrimesToFile(const char *filename, bool *primeArray, int n);
 
 int main () {
     int n;
     struct timespec start, end, startW, endW;
-    double timetaken, time_write;
+    double timetaken, timeWrite;
     
-    //Ask user to input an integer
+    // Ask user to input an integer
     printf("Enter an integer number: ");
-    scanf("%d", &n); //Store the input to the address of 'n'
+    if (scanf("%d", &n) != 1 || n < 2) {
+        printf("Invalid input.\n");
+        return 1;
+    }
 
-    // Allocate memory to store primes
-    int *primesArray = malloc(n * sizeof(int));
+    // Allocate memory using bool save memory footprint
+    bool *primeArray = (bool *)calloc(n, sizeof(bool));
+    if (primeArray == NULL) {
+        printf("Memory allocation failed.\n");
+        return 1;
+    }
 
-    //Get desired number of thread from user
+    // Get desired number of threads from user
     int num_threads;
     printf("Enter number of threads: ");
-    scanf("%d", &num_threads);
+    if (scanf("%d", &num_threads) != 1 || num_threads < 1) {
+        printf("Invalid thread count.\n");
+        free(primeArray);
+        return 1;
+    }
 
-    //Start timing only the computation
-    // Get current clock time. (Monotonic = always move foward)
-	clock_gettime(CLOCK_MONOTONIC, &start); 
+    // Start timing only the computation
+    clock_gettime(CLOCK_MONOTONIC, &start); 
     
-    #pragma omp parallel num_threads(num_threads) // Set number of threads
-    {
-        int thread_id = omp_get_thread_num();
+    // Dynamic scheduling with a chunk size of 500 to minimize scheduling overhead
+    #pragma omp parallel for num_threads(num_threads) schedule(dynamic, 500)
+    for (int k = 2; k < n; k++) {
 
-        // Find all prime numbers < n with cyclic partitioning
-        for (int k = 2 + thread_id; k < n; k += num_threads) {
+        // 2 is the only even prime number
+        if (k == 2) {
+            primeArray[k] = true;
+        }
+        // Other even numbers are not prime
+        else if (k % 2 == 0) {
+            primeArray[k] = false;
+        }
+        // Only check odd numbers
+        else {
+            bool isPrime = true;
+            // Check from 3 until sqrt(k), skipping even numbers
+            int range = (int)sqrt(k);
 
-            // Boolean variable
-            int is_prime = 1; // 1 = True, 0 = False
-
-            // 2 is the only even prime number
-            if (k == 2) {
-                is_prime = 1;
-            }
-            // Other even numbers are not prime
-            else if (k % 2 == 0) {
-                is_prime = 0;
-            }
-            // Only check odd numbers
-            else {
-                // Check from 3 until sqrt(k), skipping even numbers
-                int range = (int)sqrt(k);
-
-                for (int i = 3; i <= range; i += 2) {
-
-                    // If k has a divisor, k is not prime
-                    if (k % i == 0) {
-                        is_prime = 0;
-                        break;
-                    }
+            for (int i = 3; i <= range; i += 2) {
+                // If k has a divisor, k is not prime
+                if (k % i == 0) {
+                    isPrime = false;
+                    break;
                 }
             }
             // Store whether k is prime
-            primesArray[k] = is_prime;
+            primeArray[k] = isPrime;
         }
     }
     
@@ -76,61 +80,54 @@ int main () {
     clock_gettime(CLOCK_MONOTONIC, &end);
     
     // Duration of the computation process
-    timetaken = (end.tv_sec - start.tv_sec) * 1e9; //* 1e9 to nanoseconds
-    //include nano seconds
-    timetaken = (timetaken + (end.tv_nsec - start.tv_nsec)) / 1e9; // turn into seconds
+    timetaken = (end.tv_sec - start.tv_sec) * 1e9; 
+    timetaken = (timetaken + (end.tv_nsec - start.tv_nsec)) / 1e9; 
     
-    //%lf is for double computation time
-    printf("Time taken to compute: %lf seconds\n", timetaken);
+    printf("Computational Time: %lf seconds\n", timetaken);
 
     clock_gettime(CLOCK_MONOTONIC, &startW);
     
     // Output result
     if (n < 100) {
-        // Small n output to stdout (terminal)
         printf("All prime numbers less than %d are:\n", n);
-        
         // Serial loop to ensure sorted
         for (int k = 2; k < n; k++) {
-            if (primesArray[k]){
+            if (primeArray[k]){
                 printf("%d\n", k);
             }
         }
-
     } else {
-        // Large n output to the file
-        WritePrimesToFile("task3_output.txt", primesArray, n);
-
-        printf("Result has been written to task3_output.txt\n");
-        
+        WritePrimesToFile("task3_output.txt", primeArray, n);
     }
 
     clock_gettime(CLOCK_MONOTONIC, &endW);
-    // Duration of the computation process
-    time_write = (endW.tv_sec - startW.tv_sec) * 1e9; //* 1e9 to nanoseconds
-    //include nano seconds
-    time_write = (time_write + (endW.tv_nsec - startW.tv_nsec)) / 1e9; // turn into seconds
     
-    //%lf is for double computation time
-    printf("Time taken to write: %lf seconds\n", time_write);
+    // Duration of the write process
+    timeWrite = (endW.tv_sec - startW.tv_sec) * 1e9; 
+    timeWrite = (timeWrite + (endW.tv_nsec - startW.tv_nsec)) / 1e9; 
+    
+    printf("Writing Time: %lf seconds\n", timeWrite);
+    printf("Overall Time: %lf seconds\n", timetaken + timeWrite);
 
     // Free allocated memory
-    free(primesArray);
+    free(primeArray);
 
-    printf("Overall time taken: %1f seconds\n", timetaken + time_write);
     return 0;
 }
 
-//Helper function to write to the file (idea from lab 3 "Vector_Cell_Product.c")
-void WritePrimesToFile(char *filename, int *primesArray, int n)
+// Helper function to write to the file
+void WritePrimesToFile(const char *filename, bool *primeArray, int n)
 {
-    FILE *pFile = fopen(filename, "w"); //pFile is a pointer to a file stream
+    FILE *pFile = fopen(filename, "w"); 
+    if (pFile == NULL) return;
 
-    for (int i = 0; i < n; i++) {
-        if(primesArray[i]){
+    // Start from 2 to skip unnecessary checks for 0 and 1
+    for (int i = 2; i < n; i++) {
+        if(primeArray[i]){
             fprintf(pFile, "%d\n", i);
         }
     }
 
     fclose(pFile);
+    printf("Result has been written into %s\n", filename);
 }
