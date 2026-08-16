@@ -24,7 +24,6 @@ int main()
 {
     struct timespec start, end, startComp, endComp;
     double timetaken;
-    FILE *output;
 
     printf("Enter an integer number (n): ");
     if (scanf("%d", &n) != 1 || n < 2)
