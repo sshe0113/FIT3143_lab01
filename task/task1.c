@@ -96,7 +96,7 @@ int main () {
     
     //%lf is for double computation time
     printf("Writing Time %lf seconds\n", timeWrite);
-    printf("Overall Time: %1f seconds\n", timetaken + timeWrite);
+    printf("Overall Time: %lf seconds\n", timetaken + timeWrite);
 
     // Free allocated memory
     free(primeArray);
