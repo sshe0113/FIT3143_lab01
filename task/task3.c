@@ -56,7 +56,7 @@ int main () {
         }
         // Other even numbers are not prime
         else if (k % 2 == 0) {
-            primeArray[k] = false;
+            continue;
         }
         // Only check odd numbers
         else {
