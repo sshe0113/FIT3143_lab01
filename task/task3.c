@@ -47,7 +47,7 @@ int main () {
     clock_gettime(CLOCK_MONOTONIC, &start); 
     
     // Dynamic scheduling with a chunk size of 500 to minimize scheduling overhead
-    #pragma omp parallel for num_threads(num_threads) schedule(dynamic, 500)
+    #pragma omp parallel for num_threads(num_threads) default(none) shared(primeArray, n) schedule(dynamic, 500)
     for (int k = 2; k < n; k++) {
 
         // 2 is the only even prime number
