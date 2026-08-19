@@ -2,7 +2,6 @@
 //  Author  :   Shee Seng Cheng 34612467 sshe0113@student.monash.edu
 //              Tay Chee Hsian  34612513 ctay0040@student.monash.edu
 //  TASK 1
-//  
 //////////////////////////////////////
 
 #include <stdio.h>
