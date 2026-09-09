@@ -1,8 +1,17 @@
-//////////////////////////////////////
-//  Author  :   Shee Seng Cheng 34612467 sshe0113@student.monash.edu
-//              Tay Chee Hsian  34612513 ctay0040@student.monash.edu
-//  TASK 2
-//////////////////////////////////////
+/**
+ * @file      task2.c
+ * @brief     Multithreaded Prime Number Generator using Pthreads
+ * 
+ * @details   This program computes all prime numbers up to a user-specified integer 'n' utilizing POSIX threads (pthreads).
+ *            Work is distributed among a user-defined number of threads using a cyclic (interleaved) distribution method.
+ *            The algorithm employs optimized trial division by skipping even numbers and limiting the divisor check to the square root of the candidate.
+ *            Performance benchmarking is performed using `clock_gettime()` (CLOCK_MONOTONIC) to record computation and overall execution times.
+ *            Results for n < 100 are output to the console, whereas larger datasets are serialized to an external file (`task2_output.txt`).
+ *
+ * @author    Shee Seng Cheng (34612467) - sshe0113@student.monash.edu
+ * @author    Tay Chee Hsian (34612513) - ctay0040@student.monash.edu
+ * @note      TASK 2
+ */
 
 #include <stdio.h>
 #include <stdlib.h>

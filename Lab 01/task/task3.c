@@ -1,8 +1,17 @@
-//////////////////////////////////////
-//  Author  :   Shee Seng Cheng 34612467 sshe0113@student.monash.edu
-//              Tay Chee Hsian  34612513 ctay0040@student.monash.edu
-//  TASK 3
-//////////////////////////////////////
+/**
+ * @file      task3.c
+ * @brief     Multithreaded Prime Number Generator using OpenMP
+ * 
+ * @details   This program computes all prime numbers up to a user-specified integer 'n' leveraging OpenMP for parallelization.
+ *            It utilizes a `#pragma omp parallel for` directive with dynamic scheduling (chunk size of 500) to efficiently distribute the workload and minimize scheduling overhead.
+ *            The underlying trial division algorithm is optimized to bypass even numbers and cap divisor checks at the candidate's square root.
+ *            Execution times for both computation and file I/O operations are precisely benchmarked using `clock_gettime()` (CLOCK_MONOTONIC).
+ *            Small results (n < 100) are printed to the console, while larger outputs are serialized to a file (`task3_output.txt`).
+ *
+ * @author    Shee Seng Cheng (34612467) - sshe0113@student.monash.edu
+ * @author    Tay Chee Hsian (34612513) - ctay0040@student.monash.edu
+ * @note      TASK 3
+ */
 
 #include <stdio.h>
 #include <math.h>

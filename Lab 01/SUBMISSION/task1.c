@@ -1,8 +1,17 @@
-//////////////////////////////////////
-//  Author  :   Shee Seng Cheng 34612467 sshe0113@student.monash.edu
-//              Tay Chee Hsian  34612513 ctay0040@student.monash.edu
-//  TASK 1
-//////////////////////////////////////
+/**
+ * @file      task1.c
+ * @brief     Prime Number Generator and Performance Benchmarking
+ * 
+ * @details   This program computes all prime numbers up to a user-specified integer 'n'.
+ *            It utilizes a trial division algorithm optimized by eliminating even 
+ *            numbers and capping the divisor check at the square root of the candidate. 
+ *            Results for n < 100 are printed to standard output, while larger datasets 
+ *            are serialized to an external text file.
+ *
+ * @author    Shee Seng Cheng (34612467) - sshe0113@student.monash.edu
+ * @author    Tay Chee Hsian (34612513) - ctay0040@student.monash.edu
+ * @note      Task 1
+ */
 
 #include <stdio.h>
 #include <math.h>
