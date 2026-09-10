@@ -103,12 +103,16 @@ int main(int argc, char *argv[])
     MPI_Bcast(&n, 1, MPI_LONG, 0, MPI_COMM_WORLD);
     MPI_Bcast(&chunkSize, 1, MPI_LONG, 0, MPI_COMM_WORLD);
 
-    //Number of odd candidates from 3 to n - 1
+    //Number of odd candidates from 3 to n - 1 (1 not prime and 2 is handle by rank 0)
     long candidateCount = (n - 2) / 2;
+
+    //rounds upward when there is a remainder. (+ chunkSize - 1 is just rounding up)
     long chunkCount = (candidateCount + chunkSize - 1) / chunkSize;
 
-    //Calculate an upper bound for the number of candidates allocated to one rank
+    //Calculate an upper bound for the number of candidates allocated to one rank (also celling up)
     long maximumChunksPerRank = (chunkCount + processCount - 1) / processCount;
+
+    // + 1 for additional position for prime number 2 handle by rank 0
     long localCapacity = maximumChunksPerRank * chunkSize + 1;
 
     if (localCapacity < 1) {
@@ -120,6 +124,11 @@ int main(int argc, char *argv[])
 
     if (localPrimes == NULL) {
         fprintf(stderr, "Rank %d: memory allocation failed.\n", rank);
+        /*
+         * Terminate the MPI; Parameter:
+         * comm: Communicator of tasks to abort.
+         * errorcode: Error code to return to invoking environment.
+         */
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
@@ -170,7 +179,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    //Gather the number of primes found by each rank
+    //Gather the number of primes found by each rank (ALTERNATIVELY can use MPI_Reduce)
     MPI_Gather(&localCount, 1, MPI_INT, receiveCounts, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     int totalCount = 0;
