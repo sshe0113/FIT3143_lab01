@@ -1,12 +1,9 @@
 /**
  * @file      task1.c
  * @brief     Prime Number Generator and Performance Benchmarking
- * 
- * @details   This program computes all prime numbers up to a user-specified integer 'n'.
- *            It utilizes a trial division algorithm optimized by eliminating even 
- *            numbers and capping the divisor check at the square root of the candidate. 
- *            Results for n < 100 are printed to standard output, while larger datasets 
- *            are serialized to an external text file.
+ *
+ * @details   Extend from week 04 lab 1 but utilize MPI processes with
+ *            AWS environment work distribution.
  *
  * @author    Shee Seng Cheng (34612467) - sshe0113@student.monash.edu
  * @author    Tay Chee Hsian (34612513) - ctay0040@student.monash.edu
@@ -14,116 +11,309 @@
  */
 
 #include <stdio.h>
-#include <math.h>
-#include <time.h>
-#include <stdlib.h> 
+#include <stdlib.h>
 #include <stdbool.h>
+#include <math.h>
+#include <mpi.h>
+#include <time.h>
 
-// To notify the program that there is a function called WritePrimesToFile, 
-// and this is what its parameters look like. 
-// The actual implementation will come later.
-void WritePrimesToFile(char *filename, bool *primeArray, int n);
+//To check if this candidate is a prime, true if it is and false otherwise
+bool IsPrime(long candidate);
 
-int main () {
-    int n;
-    struct timespec start, end, startW, endW;
-    double timetaken, timeWrite;
-    
-    //Ask user to input an integer
-    printf("Enter an integer number: ");
-    scanf("%d", &n); //Store the input to the address of 'n'
+//To write the final sorted prime array into a file
+void WritePrimesToFile(const char *filename, const long *primes, int count);
 
-    // Allocate memory to store primes
-    bool *primeArray = (bool *)calloc(n, sizeof(bool));
+//To help qsort() determine how long values should be ordered
+int CompareLong(const void *a, const void *b);
 
-    //Start timing only the computation
-    // Get current clock time. (Monotonic = always move foward)
-	clock_gettime(CLOCK_MONOTONIC, &start); 
-    
-    // List all prime numbers until n
-    for (int k = 2; k < n; k++) {
+//Calculate the elapsed time
+double ElapsedSeconds(struct timespec start, struct timespec end);
 
-        // 2 is the only even prime number
-        if (k == 2) {
-            primeArray[k] = true;
+int main(int argc, char *argv[])
+{
+    MPI_Init(&argc, &argv);
+
+    //Start overall timer after MPI initialization
+    struct timespec overallStart, overallEnd;
+    clock_gettime(CLOCK_MONOTONIC, &overallStart);
+
+    int rank;
+    int processCount;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &processCount);
+
+    /*
+     * It initially contains -1 as an invalid sentinel value.
+     * Only rank 0 will replace it by reading argv[1].
+     */
+    long n = -1;
+
+    //This is the default number of odd candidates in one block-cyclic chunk
+    long chunkSize = 64;
+    int validInput = 1;
+
+    /*
+     * Only rank 0 reads the command-line arguments.
+     * Usage: ./task1 <n> [chunk-size]
+     */
+    if (rank == 0) {
+        if (argc < 2 || argc > 3) {
+            fprintf(stderr, "Usage: %s <n> [chunk-size]\n", argv[0]);
+            validInput = 0;
         }
-        // Other even numbers are not prime
-        else if (k % 2 == 0) {
-            continue;
-        }
-        // Only check odd numbers
         else {
-            bool isPrime = true;
-            // Check from 3 until sqrt(k), skipping even numbers
-            int range = (int)sqrt(k);
+            //Convert string to long format, the third argument indicates decimal base
+            char *endPointer = NULL;
+            //endPointer points to the first character strtol could not convert
+            n = strtol(argv[1], &endPointer, 10);
 
-            for (int i = 3; i <= range; i += 2) {
-                // If k has a divisor, k is not prime
-                if (k % i == 0) {
-                    isPrime = false;
-                    break;
+            if (endPointer == argv[1] || *endPointer != '\0' || n < 2) {
+                fprintf(stderr, "Invalid value of n.\n");
+                validInput = 0;
+            }
+
+            // If chunk size were provided use it instead of default 64
+            if (argc == 3) {
+                endPointer = NULL;
+                chunkSize = strtol(argv[2], &endPointer, 10);
+
+                if (endPointer == argv[2] || *endPointer != '\0' || chunkSize < 1) {
+                    fprintf(stderr, "Invalid chunk size.\n");
+                    validInput = 0;
                 }
             }
-            // Store whether k is prime
-            primeArray[k] = isPrime;
         }
     }
 
-    // Get current clock time (end for computation)
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    
-    // Duration of the computation process
-    timetaken = (end.tv_sec - start.tv_sec) * 1e9; //* 1e9 to nanoseconds
-    //include nano seconds
-    timetaken = (timetaken + (end.tv_nsec - start.tv_nsec)) / 1e9; // turn into seconds
-    
-    //%lf is for double computation time
-    printf("Computational Time: %lf seconds\n", timetaken);
+    //First tell every rank whether the input was valid
+    MPI_Bcast(
+        &validInput,    //Memory address of the value
+        1,              //Broadcast one value
+        MPI_INT,        //The value has type int
+        0,              //Rank 0 is the source/root
+        MPI_COMM_WORLD  //All processes in the program participate (communicator)
+    );
 
-    clock_gettime(CLOCK_MONOTONIC, &startW);
+    if (!validInput) {
+        MPI_Finalize();
+        return EXIT_FAILURE;
+    }
 
-    // Output result
-    if (n < 100) {
-        printf("All prime numbers less than %d are:\n", n);
-        // Serial loop to ensure sorted
-        for (int k = 2; k < n; k++) {
-            if (primeArray[k]){
-                printf("%d\n", k);
+    //Broadcast n and chunk size to every rank
+    MPI_Bcast(&n, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&chunkSize, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+
+    //Number of odd candidates from 3 to n - 1
+    long candidateCount = (n - 2) / 2;
+    long chunkCount = (candidateCount + chunkSize - 1) / chunkSize;
+
+    //Calculate an upper bound for the number of candidates allocated to one rank
+    long maximumChunksPerRank = (chunkCount + processCount - 1) / processCount;
+    long localCapacity = maximumChunksPerRank * chunkSize + 1;
+
+    if (localCapacity < 1) {
+        localCapacity = 1;
+    }
+
+    //calloc is used for the initial local prime array
+    long *localPrimes = calloc((size_t)localCapacity, sizeof(long));
+
+    if (localPrimes == NULL) {
+        fprintf(stderr, "Rank %d: memory allocation failed.\n", rank);
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+
+    int localCount = 0;
+
+    //Rank 0 handles the only even prime
+    if (rank == 0 && n > 2) {
+        localPrimes[localCount++] = 2;
+    }
+
+    /*
+     * Block-cyclic workload distribution.
+     * Each rank receives chunk numbers:
+     * rank, rank + processCount, rank + 2 * processCount...
+     */
+    for (long chunk = rank; chunk < chunkCount; chunk += processCount) {
+        long startIndex = chunk * chunkSize;
+        long endIndex = startIndex + chunkSize;
+
+        if (endIndex > candidateCount) {
+            endIndex = candidateCount;
+        }
+
+        for (long index = startIndex; index < endIndex; index++) {
+            long candidate = 2 * index + 3;
+
+            if (IsPrime(candidate)) {
+                if (localCount >= localCapacity) {
+                    fprintf(stderr, "Rank %d: local array is full.\n", rank);
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                }
+
+                localPrimes[localCount++] = candidate;
             }
         }
-    } else {
-        // Large n output to the file
-        WritePrimesToFile("task1_output.txt", primeArray, n);
     }
-    clock_gettime(CLOCK_MONOTONIC, &endW);
 
-    // Duration of the computation process
-    timeWrite = (endW.tv_sec - startW.tv_sec) * 1e9; //* 1e9 to nanoseconds
-    //include nano seconds
-    timeWrite = (timeWrite + (endW.tv_nsec - startW.tv_nsec)) / 1e9; // turn into seconds
-    
-    //%lf is for double computation time
-    printf("Writing Time %lf seconds\n", timeWrite);
-    printf("Overall Time: %lf seconds\n", timetaken + timeWrite);
+    int *receiveCounts = NULL;
+    int *displacements = NULL;
 
-    // Free allocated memory
-    free(primeArray);
+    if (rank == 0) {
+        receiveCounts = calloc((size_t)processCount, sizeof(int));
+        displacements = calloc((size_t)processCount, sizeof(int));
 
-    return 0;
+        if (receiveCounts == NULL || displacements == NULL) {
+            fprintf(stderr, "Rank 0: gathering allocation failed.\n");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
+    }
+
+    //Gather the number of primes found by each rank
+    MPI_Gather(&localCount, 1, MPI_INT, receiveCounts, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    int totalCount = 0;
+    long *allPrimes = NULL;
+
+    if (rank == 0) {
+        for (int i = 0; i < processCount; i++) {
+            displacements[i] = totalCount;
+            totalCount += receiveCounts[i];
+        }
+
+        int allocationCount = totalCount > 0 ? totalCount : 1;
+        allPrimes = calloc((size_t)allocationCount, sizeof(long));
+
+        if (allPrimes == NULL) {
+            fprintf(stderr, "Rank 0: final allocation failed.\n");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
+    }
+
+    //Collect every variable-sized local prime array
+    MPI_Gatherv(localPrimes, localCount, MPI_LONG, allPrimes, receiveCounts,
+                displacements, MPI_LONG, 0, MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        qsort(allPrimes, (size_t)totalCount, sizeof(long), CompareLong);
+        WritePrimesToFile("task1_output.txt", allPrimes, totalCount);
+
+        //Also print small test results
+        if (n < 100) {
+            printf("Prime numbers less than %ld:\n", n);
+
+            for (int i = 0; i < totalCount; i++) {
+                printf("%ld\n", allPrimes[i]);
+            }
+        }
+    }
+
+    /*
+     * Other ranks wait for rank 0 to finish sorting and writing.
+     * Overall time includes setup, computation, communication,
+     * sorting and file writing.
+     */
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    clock_gettime(CLOCK_MONOTONIC, &overallEnd);
+    double localOverallTime = ElapsedSeconds(overallStart, overallEnd);
+    double overallTime = localOverallTime;
+    const int timingTag = 100;
+
+    /*
+     * Non-root ranks send their overall durations to rank 0.
+     * Rank 0 uses the longest duration as the parallel runtime.
+     */
+    if (rank == 0) {
+        for (int source = 1; source < processCount; source++) {
+            double receivedTime;
+            MPI_Recv(&receivedTime, 1, MPI_DOUBLE, source, timingTag,
+                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+            if (receivedTime > overallTime) {
+                overallTime = receivedTime;
+            }
+        }
+
+        printf("\nProcesses: %d\n", processCount);
+        printf("Chunk size: %ld\n", chunkSize);
+        printf("Primes found: %d\n", totalCount);
+        printf("Overall time: %.9f seconds\n", overallTime);
+    }
+    else {
+        MPI_Send(&localOverallTime, 1, MPI_DOUBLE, 0, timingTag, MPI_COMM_WORLD);
+    }
+
+    free(localPrimes);
+
+    if (rank == 0) {
+        free(allPrimes);
+        free(receiveCounts);
+        free(displacements);
+    }
+
+    MPI_Finalize();
+    return EXIT_SUCCESS;
 }
 
-//Helper function to write to the file (idea from lab 3 "Vector_Cell_Product.c")
-void WritePrimesToFile(char *filename, bool *primeArray, int n)
+/*
+ * Helper function to determine whether a number is prime.
+ * The concept is the same as lab 01.
+ */
+bool IsPrime(long candidate)
 {
-    FILE *pFile = fopen(filename, "w"); //pFile is a pointer to a file stream
+    if (candidate < 2) {return false;}
+    if (candidate == 2) {return true;}
+    if (candidate % 2 == 0) {return false;}
 
-    // Start from 2 to skip unnecessary checks for 0 and 1
-    for (int i = 2; i < n; i++) {
-        if(primeArray[i]){
-            fprintf(pFile, "%d\n", i);
-        }
+    long limit = (long)sqrt((double)candidate);
+
+    for (long divisor = 3; divisor <= limit; divisor += 2) {
+        if (candidate % divisor == 0) {return false;}
+    }
+
+    return true;
+}
+
+//Helper function to write the sorted primes to a file
+void WritePrimesToFile(const char *filename, const long *primes, int count)
+{
+    FILE *pFile = fopen(filename, "w");
+
+    if (pFile == NULL) {
+        fprintf(stderr, "Unable to open %s.\n", filename);
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+
+    for (int i = 0; i < count; i++) {
+        fprintf(pFile, "%ld\n", primes[i]);
     }
 
     fclose(pFile);
     printf("Result has been written into %s\n", filename);
+}
+
+//Helper function that helps qsort() determine how long values should be ordered
+int CompareLong(const void *a, const void *b)
+{
+    long first = *(const long *)a;
+    long second = *(const long *)b;
+
+    if (first < second) {
+        return -1;
+    }
+
+    if (first > second) {
+        return 1;
+    }
+
+    return 0;
+}
+
+//Helper function to calculate the elapsed seconds
+double ElapsedSeconds(struct timespec start, struct timespec end)
+{
+    return (double)(end.tv_sec - start.tv_sec) +
+           (double)(end.tv_nsec - start.tv_nsec) / 1e9;
 }
