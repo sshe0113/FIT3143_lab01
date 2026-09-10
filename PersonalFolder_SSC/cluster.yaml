@@ -1,0 +1,25 @@
+Region: ap-southeast-5
+
+Image:
+  Os: alinux2023
+
+HeadNode:
+  InstanceType: t3.micro
+  Networking:
+    SubnetId: subnet-02a9bb071baae1a74
+  Ssh:
+    KeyName: fit3143-pcluster-key-Malaysia
+
+Scheduling:
+  Scheduler: slurm
+  SlurmQueues:
+    - Name: compute
+      Networking:
+        SubnetIds:
+          - subnet-02a9bb071baae1a74
+      ComputeResources:
+        - Name: compute
+          Instances:
+            - InstanceType: t3.small
+          MinCount: 0
+          MaxCount: 8
