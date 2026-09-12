@@ -14,10 +14,7 @@ gcc task/task1_Serial.c -o compile/task1_Serial -lm
 
 For **single N:**
 ```
-echo 10000000 > input/single_Serial.txt
-```
-```
-./compile/task1_Serial input/single_Serial.txt
+./compile/task1_Serial <N>
 ```
 
 For **multiple N:**
