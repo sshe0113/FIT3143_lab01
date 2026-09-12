@@ -27,27 +27,20 @@ int main(int argc, char *argv[])
 {
     MPI_Init(&argc, &argv);
 
-    struct timespec start, end;
+    struct timespec start, end, startComm, endComm, startComp, endComp;
+    int rank, processCount;
+    double locCommTime = 0.0;
+    long n = -1, chunkSize = 64, validInput = 1;
 
     // ---------------------------------------------------------
     // Overall Time Start
     // ---------------------------------------------------------
     clock_gettime(CLOCK_MONOTONIC, &start);
 
-    int rank, processCount;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &processCount);
 
-    double localCommunicationTime = 0.0;
-    struct timespec commStart, commEnd;
-
-    long n = -1;
-    long chunkSize = 64; // Default chunk size
-    long validInput = 1;
-
-    // ---------------------------------------------------------
     // Command-Line Parsing (Rank 0 Only)
-    // ---------------------------------------------------------
     if (rank == 0) {
         if (argc < 2 || argc > 3) {
             fprintf(stderr, "Usage: %s <N> [chunk-size]\n", argv[0]);
@@ -68,11 +61,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    // ---------------------------------------------------------
-    // 3. Optimized Broadcast (Payload Packing)
-    // ---------------------------------------------------------
-    // Instead of 3 separate broadcasts, we pack the variables into a single array
-    // to reduce network handshake latency by 66%.
+    // Packing required information to other processes need to know
     long bcast_data[3];
     if (rank == 0) {
         bcast_data[0] = validInput;
@@ -80,10 +69,20 @@ int main(int argc, char *argv[])
         bcast_data[2] = chunkSize;
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &commStart);
+    // ---------------------------------------------------------
+    // Communication Time Start
+    // ---------------------------------------------------------
+    clock_gettime(CLOCK_MONOTONIC, &startComm);
+
     MPI_Bcast(bcast_data, 3, MPI_LONG, 0, MPI_COMM_WORLD);
-    clock_gettime(CLOCK_MONOTONIC, &commEnd);
-    localCommunicationTime += ElapsedSeconds(commStart, commEnd);
+
+    // ---------------------------------------------------------
+    // Communication Time End
+    // ---------------------------------------------------------
+    clock_gettime(CLOCK_MONOTONIC, &endComm);
+
+    // Accumulate communication time
+    locCommTime += ElapsedSeconds(startComm, endComm);
 
     // Unpack the variables on all non-root ranks
     if (rank != 0) {
@@ -97,9 +96,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    // ---------------------------------------------------------
-    // 4. Computation (Block-Cyclic Distribution)
-    // ---------------------------------------------------------
+    // Block-Cyclic Distribution
     // Allocate the boolean array for this specific rank
     bool *localPrimeArray = (bool *)calloc(n, sizeof(bool));
     if (localPrimeArray == NULL) {
@@ -107,8 +104,10 @@ int main(int argc, char *argv[])
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
-    struct timespec compStart, compEnd;
-    clock_gettime(CLOCK_MONOTONIC, &compStart);
+    // ---------------------------------------------------------
+    // Computational Time Start
+    // ---------------------------------------------------------
+    clock_gettime(CLOCK_MONOTONIC, &startComp);
 
     if (rank == 0 && n > 2) {
         localPrimeArray[2] = true;
@@ -135,36 +134,44 @@ int main(int argc, char *argv[])
         }
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &compEnd);
-    double localComputationTime = ElapsedSeconds(compStart, compEnd);
+    // ---------------------------------------------------------
+    // Computational Time End
+    // ---------------------------------------------------------
+    clock_gettime(CLOCK_MONOTONIC, &endComp);
 
-    // ---------------------------------------------------------
-    // 5. Data Merge (Logical OR Reduction)
-    // ---------------------------------------------------------
+    // Accumulate computational time
+    double locCompTime = ElapsedSeconds(startComp, endComp);
+
+    // Boolean array to record true (prime) or false (non-prime)
     bool *globalPrimeArray = NULL;
     if (rank == 0) {
         globalPrimeArray = (bool *)calloc(n, sizeof(bool));
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &commStart);
-    // The MPI network merges all arrays into Rank 0. If ANY rank found a prime
+    // ---------------------------------------------------------
+    // Communication Time Start
+    // ---------------------------------------------------------
+    clock_gettime(CLOCK_MONOTONIC, &startComm);
+
+    // The MPI network merges all arrays into Rank 0. If any rank found a prime
     // at a specific index, MPI_LOR forces the master array index to 'true'.
     MPI_Reduce(localPrimeArray, globalPrimeArray, n, MPI_C_BOOL, MPI_LOR, 0, MPI_COMM_WORLD);
-    clock_gettime(CLOCK_MONOTONIC, &commEnd);
-    localCommunicationTime += ElapsedSeconds(commStart, commEnd);
 
     // ---------------------------------------------------------
-    // 6. Time Merge (Maximum Time Reduction)
+    // Communication Time End
     // ---------------------------------------------------------
-    double localTimes[2] = {localComputationTime, localCommunicationTime};
+    clock_gettime(CLOCK_MONOTONIC, &endComm);
+
+    // Accumulate communication time
+    locCommTime += ElapsedSeconds(startComm, endComm);
+
+    double localTimes[2] = {locCompTime, locCommTime};
     double maxTimes[2] = {0.0, 0.0};
 
     // A single collective call replaces the entire MPI_Send / MPI_Recv loop block
     MPI_Reduce(localTimes, maxTimes, 2, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
-    // ---------------------------------------------------------
-    // 7. Output & Finalization
-    // ---------------------------------------------------------
+    // Write result to file
     if (rank == 0) {
         if (n < 100) {
             printf("Prime numbers less than %ld:\n", n);
@@ -176,14 +183,16 @@ int main(int argc, char *argv[])
             WriteToFile("task1_OpenMPI.txt", globalPrimeArray, n);
         }
 
-        // Rank 0 measures overall time AFTER writing to the file
+        // ---------------------------------------------------------
+        // Overall Time End
+        // ---------------------------------------------------------
         clock_gettime(CLOCK_MONOTONIC, &end);
+
+        // Calculate overall time
         double overallTime = ElapsedSeconds(start, end);
 
-        printf("\nProcesses: %d\n", processCount);
-        printf("Chunk size: %ld\n", chunkSize);
-        printf("Maximum Computation Time: %lf seconds\n", maxTimes[0]);
-        printf("Maximum Communication Time: %lf seconds\n", maxTimes[1]);
+        printf("Computation Time: %lf seconds\n", maxTimes[0]);
+        printf("Communication Time: %lf seconds\n", maxTimes[1]);
         printf("Overall Time: %lf seconds\n", overallTime);
         
         free(globalPrimeArray);
@@ -195,9 +204,6 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 }
 
-// ---------------------------------------------------------
-// Helper Functions
-// ---------------------------------------------------------
 bool IsPrime(long candidate)
 {
     if (candidate < 2) {return false;}
