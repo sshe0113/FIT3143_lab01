@@ -236,44 +236,27 @@ int main(int argc, char *argv[])
 
     clock_gettime(CLOCK_MONOTONIC, &overallEnd);
     double localOverallTime = ElapsedSeconds(overallStart, overallEnd);
-    double localTimes[3] = {localComputationTime, localCommunicationTime, localOverallTime};
-    double maximumComputationTime = localComputationTime;
-    double maximumCommunicationTime = localCommunicationTime;
-    double overallTime = localOverallTime;
-    const int timingTag = 100;
+    double localTimes[3] = {
+        localComputationTime,
+        localCommunicationTime,
+        localOverallTime
+    };
+
+    double maximumTimes[3] = {0.0, 0.0, 0.0};
 
     /*
-     * Non-root ranks send their computation, communication and overall
-     * durations to rank 0. Timing messages are outside the overall timer.
-     */
+    * Find the maximum computation, communication and overall
+    * times across all MPI ranks.
+    */
+    MPI_Reduce(localTimes, maximumTimes, 3, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
     if (rank == 0) {
-        for (int source = 1; source < processCount; source++) {
-            double receivedTimes[3];
-            MPI_Recv(receivedTimes, 3, MPI_DOUBLE, source, timingTag,
-                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-            if (receivedTimes[0] > maximumComputationTime) {
-                maximumComputationTime = receivedTimes[0];
-            }
-
-            if (receivedTimes[1] > maximumCommunicationTime) {
-                maximumCommunicationTime = receivedTimes[1];
-            }
-
-            if (receivedTimes[2] > overallTime) {
-                overallTime = receivedTimes[2];
-            }
-        }
-
         printf("\nProcesses: %d\n", processCount);
         printf("Chunk size: %ld\n", chunkSize);
         printf("Primes found: %d\n", totalCount);
-        printf("Maximum computation time: %.9f seconds\n", maximumComputationTime);
-        printf("Maximum MPI communication time: %.9f seconds\n", maximumCommunicationTime);
-        printf("Overall time: %.9f seconds\n", overallTime);
-    }
-    else {
-        MPI_Send(localTimes, 3, MPI_DOUBLE, 0, timingTag, MPI_COMM_WORLD);
+        printf("Maximum computation time: %.9f seconds\n", maximumTimes[0]);
+        printf("Maximum MPI communication time: %.9f seconds\n", maximumTimes[1]);
+        printf("Overall time: %.9f seconds\n", maximumTimes[2]);
     }
 
     free(localPrimes);
