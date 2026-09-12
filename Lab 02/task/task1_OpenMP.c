@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 
     n = atoi(argv[1]);
     numThreads = atoi(argv[2]);
-    printf("Mode: Command Line | n = %d, Threads = %d\n", n, numThreads);
+    printf("N = %d, Threads = %d\n", n, numThreads);
 
     if (n <= 0 || numThreads < 1) {
         printf("Error: Invalid 'n' or thread count.\n");

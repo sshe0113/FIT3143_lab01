@@ -38,7 +38,7 @@ int main (int argc, char *argv[]) {
         printf("Error: Invalid 'n'.\n");
         return 1;
     }
-    printf("Mode: Command Line | n = %d\n", n);
+    printf("N = %d\n", n);
 
     // Allocate memory to store primes
     bool *primeArray = (bool *)calloc(n, sizeof(bool));
