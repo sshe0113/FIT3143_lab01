@@ -34,18 +34,9 @@ gcc task/task1_POSIX.c -o compile/task1_POSIX -lm -lpthread
 ```
 
 For **single N:** 
-- Using **input file:**
-    ```
-    echo "<N> <# of threads>" > input/single_POSIX.txt
-    ```
-    ```
-    ./compile/task1_POSIX input/single_POSIX.txt
-    ```
-
-- Using **command line:**
-    ```
-    ./compile/task1_POSIX <N> <# of threads>
-    ```
+```
+./compile/task1_POSIX <N> <# of threads>
+```
 
 Replace `<N>` and `<# of threads>`.
 
@@ -67,19 +58,10 @@ Compile c code
 gcc task/task1_OpenMP.c -o compile/task1_OpenMP -lm -fopenmp
 ```
 
-For **single N:** 
-- Using **input file:**
-    ```
-    echo "<N> <# of threads>" > input/single_OpenMP.txt
-    ```
-    ```
-    ./compile/task1_OpenMP input/single_OpenMP.txt
-    ```
-
-- Using **command line:**
-    ```
-    ./compile/task1_OpenMP <N> <# of threads>
-    ```
+For **single N:**
+```
+./compile/task1_OpenMP <N> <# of threads>
+```
 
 For **multiple N:** 
 ```

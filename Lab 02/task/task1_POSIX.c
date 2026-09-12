@@ -1,12 +1,7 @@
 /**
  * @file      task1_POSIX.c
- * @brief     Multithreaded Prime Number Generator using Pthreads (Dual-Mode)
+ * @brief     Prime Number Generator by POSIX (Pthreads)
  * 
- * @details   This program computes prime numbers up to 'n' using POSIX threads.
- *            It supports two execution modes: 
- *            Mode 1: Read 'n' and thread count from a text file.
- *            Mode 2: Read 'n' and thread count directly from command-line arguments.
- *
  * @author    Shee Seng Cheng (34612467) - sshe0113@student.monash.edu
  * @author    Tay Chee Hsian (34612513) - ctay0040@student.monash.edu
  */
@@ -25,7 +20,6 @@ bool *primeArray;
 
 // Function prototypes
 void *find_prime(void *arg);
-void ReadFromFile(char *pFilename, int *pN, int *pThreads);
 void WriteToFile(char *pFilename, bool *primeArray, int n);
 
 int main(int argc, char *argv[])
@@ -39,23 +33,15 @@ int main(int argc, char *argv[])
     clock_gettime(CLOCK_MONOTONIC, &start);
 
     // Input Handling
-    if (argc == 2) {
-        // MODE 1: File Input
-        ReadFromFile(argv[1], &n, &numThreads);
-        printf("Mode: File Input | Read n = %d, Threads = %d from %s\n", n, numThreads, argv[1]);
-    } 
-    else if (argc == 3) {
-        // MODE 2: Direct Command Line
-        n = atoi(argv[1]);
-        numThreads = atoi(argv[2]);
-        printf("Mode: Command Line | Read n = %d, Threads = %d\n", n, numThreads);
-    } 
-    else {
+    if (argc != 3) {
         printf("Error: Invalid arguments.\n");
-        printf("Usage 1 (File): %s <input_file.txt>\n", argv[0]);
-        printf("Usage 2 (Direct): %s <N> <num_threads>\n", argv[0]);
+        printf("Usage: %s <N> <num_threads>\n", argv[0]);
         return 1;
     }
+
+    n = atoi(argv[1]);
+    numThreads = atoi(argv[2]);
+    printf("Mode: Command Line | n = %d, Threads = %d\n", n, numThreads);
 
     if (n <= 0 || numThreads < 1) {
         printf("Error: Invalid 'n' or thread count.\n");
@@ -168,24 +154,6 @@ void *find_prime(void *arg)
         }
     }
     pthread_exit(NULL);  
-}
-
-void ReadFromFile(char *pFilename, int *pN, int *pThreads)
-{
-    FILE *pFile = fopen(pFilename, "r");
-    if(pFile == NULL)
-    {
-        printf("Error: Cannot open file %s\n", pFilename);
-        exit(1); 
-    }
-
-    // Attempt to read two integers from the file
-    if (fscanf(pFile, "%d %d", pN, pThreads) != 2) {
-        printf("Error: File must contain two integers (N and Threads).\n");
-        exit(1);
-    }
-    
-    fclose(pFile);
 }
 
 void WriteToFile(char *pFilename, bool *primeArray, int n)

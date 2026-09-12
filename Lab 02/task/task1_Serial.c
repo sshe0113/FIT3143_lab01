@@ -1,7 +1,6 @@
 /**
  * @file      task1_Serial.c
  * @brief     Prime Number Generator by Serial code approach
- * @details   
  * 
  * @author    Shee Seng Cheng (34612467) - sshe0113@student.monash.edu
  * @author    Tay Chee Hsian (34612513) - ctay0040@student.monash.edu
@@ -13,8 +12,7 @@
 #include <stdlib.h> 
 #include <stdbool.h>
 
-// Function prototypes
-int ReadFromFile(char *pFilename);
+// Function prototype
 void WriteToFile(char *pFilename, bool *primeArray, int n);
 
 int main (int argc, char *argv[]) {
@@ -24,7 +22,8 @@ int main (int argc, char *argv[]) {
     
     // Check for command line arguments
     if (argc != 2) {
-        printf("Usage: %s <input_file.txt>\n", argv[0]);
+        printf("Error: Invalid arguments.\n");
+        printf("Usage: %s <N>\n", argv[0]);
         return 1;
     }
 
@@ -33,13 +32,13 @@ int main (int argc, char *argv[]) {
     //-------------------------------------
     clock_gettime(CLOCK_MONOTONIC, &start);
 
-    // Read N from the provided file
-    n = ReadFromFile(argv[1]);
+    // Read N directly from the command line
+    n = atoi(argv[1]);
     if (n <= 0) {
-        printf("Error: Invalid or missing 'n' in file.\n");
+        printf("Error: Invalid 'n'.\n");
         return 1;
     }
-    printf("Read n = %d from file %s\n", n, argv[1]);
+    printf("Mode: Command Line | n = %d\n", n);
 
     // Allocate memory to store primes
     bool *primeArray = (bool *)calloc(n, sizeof(bool));
@@ -105,23 +104,6 @@ int main (int argc, char *argv[]) {
 
     free(primeArray);
     return 0;
-}
-
-int ReadFromFile(char *pFilename)
-{
-    int n = 0;
-    FILE *pFile = fopen(pFilename, "r");
-    if(pFile == NULL)
-    {
-        printf("Error: Cannot open file %s\n", pFilename);
-        return 0;
-    }
-
-    // Read the first integer in the file
-    fscanf(pFile, "%d", &n);
-    fclose(pFile);
-
-    return n;
 }
 
 void WriteToFile(char *pFilename, bool *primeArray, int n)

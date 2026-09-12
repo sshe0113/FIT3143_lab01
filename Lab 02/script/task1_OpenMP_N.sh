@@ -2,15 +2,15 @@
 
 if [ "$#" -eq 0 ]; then
     echo "Error: No thread count provided."
-    echo "Usage: bash script/task3_OpenMP_N.sh <thread_count1> [thread_count2 ...]"
+    echo "Usage: bash script/task1_OpenMP_N.sh <thread_count1> [thread_count2 ...]"
     exit 1
 fi
 
 BASE_DIR=$(pwd)
-PROGRAM="$BASE_DIR/compile/task3_OpenMP"
+PROGRAM="$BASE_DIR/compile/task1_OpenMP"
 
 mkdir -p "$BASE_DIR/time"
-CSV_FILE="$BASE_DIR/time/task3_OpenMP_N.csv"
+CSV_FILE="$BASE_DIR/time/task1_OpenMP_N.csv"
 
 if [ ! -f "$CSV_FILE" ]; then
     echo "N,Threads,Computational_Time_sec,Overall_Time_sec" > "$CSV_FILE"
@@ -37,6 +37,6 @@ do
     done
 done
 
-rm -f task3_OpenMP.txt
+rm -f task1_OpenMP.txt
 echo "--------------------------------------------------------"
 echo "Benchmarking complete! Data saved to $CSV_FILE."

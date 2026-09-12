@@ -1,11 +1,7 @@
 /**
  * @file      task1_OpenMP.c
- * @brief     Multithreaded Prime Number Generator using OpenMP (Dual-Mode)
+ * @brief     Prime Number Generator by OpenMP
  * 
- * @details   This program computes all prime numbers up to 'n' leveraging OpenMP.
- *            It utilizes dynamic scheduling (chunk size 500) to distribute workloads.
- *            Execution supports both file input and command-line arguments.
- *
  * @author    Shee Seng Cheng (34612467) - sshe0113@student.monash.edu
  * @author    Tay Chee Hsian (34612513) - ctay0040@student.monash.edu
  */
@@ -22,38 +18,29 @@ int n;
 int numThreads;
 bool *primeArray;
 
-// Function prototypes
-void ReadFromFile(char *pFilename, int *pN, int *pThreads);
+// Function prototype
 void WriteToFile(char *pFilename, bool *primeArray, int n);
 
 int main(int argc, char *argv[]) 
 {
-    struct timespec startOverall, endOverall, startComp, endComp;
+    struct timespec start, end, startComp, endComp;
     double timeComp, timeOverall;
 
     //-------------------------------------
     // Overall Time Start
     //-------------------------------------
-    clock_gettime(CLOCK_MONOTONIC, &startOverall);
+    clock_gettime(CLOCK_MONOTONIC, &start);
 
     // Input Handling
-    if (argc == 2) {
-        // MODE 1: File Input
-        ReadFromFile(argv[1], &n, &numThreads);
-        printf("Mode: File Input | Read n = %d, Threads = %d from %s\n", n, numThreads, argv[1]);
-    } 
-    else if (argc == 3) {
-        // MODE 2: Direct Command Line
-        n = atoi(argv[1]);
-        numThreads = atoi(argv[2]);
-        printf("Mode: Command Line | Read n = %d, Threads = %d\n", n, numThreads);
-    } 
-    else {
+    if (argc != 3) {
         printf("Error: Invalid arguments.\n");
-        printf("Usage 1 (File): %s <input_file.txt>\n", argv[0]);
-        printf("Usage 2 (Direct): %s <N> <num_threads>\n", argv[0]);
+        printf("Usage: %s <N> <num_threads>\n", argv[0]);
         return 1;
     }
+
+    n = atoi(argv[1]);
+    numThreads = atoi(argv[2]);
+    printf("Mode: Command Line | n = %d, Threads = %d\n", n, numThreads);
 
     if (n <= 0 || numThreads < 1) {
         printf("Error: Invalid 'n' or thread count.\n");
@@ -119,34 +106,17 @@ int main(int argc, char *argv[])
     //-------------------------------------
     // Overall Time End
     //-------------------------------------
-    clock_gettime(CLOCK_MONOTONIC, &endOverall);
+    clock_gettime(CLOCK_MONOTONIC, &end);
     
     // Calculate Overall Time
-    timeOverall = (endOverall.tv_sec - startOverall.tv_sec) * 1e9; 
-    timeOverall = (timeOverall + (endOverall.tv_nsec - startOverall.tv_nsec)) / 1e9; 
+    timeOverall = (end.tv_sec - start.tv_sec) * 1e9; 
+    timeOverall = (timeOverall + (end.tv_nsec - start.tv_nsec)) / 1e9; 
 
     printf("Computational Time: %lf seconds\n", timeComp);
     printf("Overall Time: %lf seconds\n", timeOverall);
 
     free(primeArray);
     return 0;
-}
-
-void ReadFromFile(char *pFilename, int *pN, int *pThreads)
-{
-    FILE *pFile = fopen(pFilename, "r");
-    if(pFile == NULL)
-    {
-        printf("Error: Cannot open file %s\n", pFilename);
-        exit(1);
-    }
-
-    if (fscanf(pFile, "%d %d", pN, pThreads) != 2) {
-        printf("Error: File must contain two integers (N and Threads).\n");
-        exit(1);
-    }
-    
-    fclose(pFile);
 }
 
 void WriteToFile(char *pFilename, bool *primeArray, int n)
