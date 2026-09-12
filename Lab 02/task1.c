@@ -42,6 +42,9 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &processCount);
 
+    double localCommunicationTime = 0.0;
+    struct timespec communicationStart, communicationEnd;
+
     /*
      * It initially contains -1 as an invalid sentinel value.
      * Only rank 0 will replace it by reading argv[1].
@@ -72,7 +75,6 @@ int main(int argc, char *argv[])
                 validInput = 0;
             }
 
-            // If chunk size were provided use it instead of default 64
             if (argc == 3) {
                 endPointer = NULL;
                 chunkSize = strtol(argv[2], &endPointer, 10);
@@ -86,13 +88,10 @@ int main(int argc, char *argv[])
     }
 
     //First tell every rank whether the input was valid
-    MPI_Bcast(
-        &validInput,    //Memory address of the value
-        1,              //Broadcast one value
-        MPI_INT,        //The value has type int
-        0,              //Rank 0 is the source/root
-        MPI_COMM_WORLD  //All processes in the program participate (communicator)
-    );
+    clock_gettime(CLOCK_MONOTONIC, &communicationStart);
+    MPI_Bcast(&validInput, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    clock_gettime(CLOCK_MONOTONIC, &communicationEnd);
+    localCommunicationTime += ElapsedSeconds(communicationStart, communicationEnd);
 
     if (!validInput) {
         MPI_Finalize();
@@ -100,19 +99,22 @@ int main(int argc, char *argv[])
     }
 
     //Broadcast n and chunk size to every rank
+    clock_gettime(CLOCK_MONOTONIC, &communicationStart);
     MPI_Bcast(&n, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+    clock_gettime(CLOCK_MONOTONIC, &communicationEnd);
+    localCommunicationTime += ElapsedSeconds(communicationStart, communicationEnd);
+
+    clock_gettime(CLOCK_MONOTONIC, &communicationStart);
     MPI_Bcast(&chunkSize, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+    clock_gettime(CLOCK_MONOTONIC, &communicationEnd);
+    localCommunicationTime += ElapsedSeconds(communicationStart, communicationEnd);
 
-    //Number of odd candidates from 3 to n - 1 (1 not prime and 2 is handle by rank 0)
+    //Number of odd candidates from 3 to n - 1
     long candidateCount = (n - 2) / 2;
-
-    //rounds upward when there is a remainder. (+ chunkSize - 1 is just rounding up)
     long chunkCount = (candidateCount + chunkSize - 1) / chunkSize;
 
-    //Calculate an upper bound for the number of candidates allocated to one rank (also celling up)
+    //Calculate an upper bound for the number of candidates allocated to one rank
     long maximumChunksPerRank = (chunkCount + processCount - 1) / processCount;
-
-    // + 1 for additional position for prime number 2 handle by rank 0
     long localCapacity = maximumChunksPerRank * chunkSize + 1;
 
     if (localCapacity < 1) {
@@ -124,15 +126,13 @@ int main(int argc, char *argv[])
 
     if (localPrimes == NULL) {
         fprintf(stderr, "Rank %d: memory allocation failed.\n", rank);
-        /*
-         * Terminate the MPI; Parameter:
-         * comm: Communicator of tasks to abort.
-         * errorcode: Error code to return to invoking environment.
-         */
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
     int localCount = 0;
+
+    struct timespec computationStart, computationEnd;
+    clock_gettime(CLOCK_MONOTONIC, &computationStart);
 
     //Rank 0 handles the only even prime
     if (rank == 0 && n > 2) {
@@ -166,6 +166,9 @@ int main(int argc, char *argv[])
         }
     }
 
+    clock_gettime(CLOCK_MONOTONIC, &computationEnd);
+    double localComputationTime = ElapsedSeconds(computationStart, computationEnd);
+
     int *receiveCounts = NULL;
     int *displacements = NULL;
 
@@ -179,8 +182,11 @@ int main(int argc, char *argv[])
         }
     }
 
-    //Gather the number of primes found by each rank (ALTERNATIVELY can use MPI_Reduce)
+    //Gather the number of primes found by each rank
+    clock_gettime(CLOCK_MONOTONIC, &communicationStart);
     MPI_Gather(&localCount, 1, MPI_INT, receiveCounts, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    clock_gettime(CLOCK_MONOTONIC, &communicationEnd);
+    localCommunicationTime += ElapsedSeconds(communicationStart, communicationEnd);
 
     int totalCount = 0;
     long *allPrimes = NULL;
@@ -201,8 +207,11 @@ int main(int argc, char *argv[])
     }
 
     //Collect every variable-sized local prime array
+    clock_gettime(CLOCK_MONOTONIC, &communicationStart);
     MPI_Gatherv(localPrimes, localCount, MPI_LONG, allPrimes, receiveCounts,
                 displacements, MPI_LONG, 0, MPI_COMM_WORLD);
+    clock_gettime(CLOCK_MONOTONIC, &communicationEnd);
+    localCommunicationTime += ElapsedSeconds(communicationStart, communicationEnd);
 
     if (rank == 0) {
         qsort(allPrimes, (size_t)totalCount, sizeof(long), CompareLong);
@@ -227,31 +236,44 @@ int main(int argc, char *argv[])
 
     clock_gettime(CLOCK_MONOTONIC, &overallEnd);
     double localOverallTime = ElapsedSeconds(overallStart, overallEnd);
+    double localTimes[3] = {localComputationTime, localCommunicationTime, localOverallTime};
+    double maximumComputationTime = localComputationTime;
+    double maximumCommunicationTime = localCommunicationTime;
     double overallTime = localOverallTime;
     const int timingTag = 100;
 
     /*
-     * Non-root ranks send their overall durations to rank 0.
-     * Rank 0 uses the longest duration as the parallel runtime.
+     * Non-root ranks send their computation, communication and overall
+     * durations to rank 0. Timing messages are outside the overall timer.
      */
     if (rank == 0) {
         for (int source = 1; source < processCount; source++) {
-            double receivedTime;
-            MPI_Recv(&receivedTime, 1, MPI_DOUBLE, source, timingTag,
+            double receivedTimes[3];
+            MPI_Recv(receivedTimes, 3, MPI_DOUBLE, source, timingTag,
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-            if (receivedTime > overallTime) {
-                overallTime = receivedTime;
+            if (receivedTimes[0] > maximumComputationTime) {
+                maximumComputationTime = receivedTimes[0];
+            }
+
+            if (receivedTimes[1] > maximumCommunicationTime) {
+                maximumCommunicationTime = receivedTimes[1];
+            }
+
+            if (receivedTimes[2] > overallTime) {
+                overallTime = receivedTimes[2];
             }
         }
 
         printf("\nProcesses: %d\n", processCount);
         printf("Chunk size: %ld\n", chunkSize);
         printf("Primes found: %d\n", totalCount);
+        printf("Maximum computation time: %.9f seconds\n", maximumComputationTime);
+        printf("Maximum MPI communication time: %.9f seconds\n", maximumCommunicationTime);
         printf("Overall time: %.9f seconds\n", overallTime);
     }
     else {
-        MPI_Send(&localOverallTime, 1, MPI_DOUBLE, 0, timingTag, MPI_COMM_WORLD);
+        MPI_Send(localTimes, 3, MPI_DOUBLE, 0, timingTag, MPI_COMM_WORLD);
     }
 
     free(localPrimes);
