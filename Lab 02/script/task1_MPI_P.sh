@@ -9,8 +9,7 @@ if [ "$#" -eq 0 ]; then
 fi
 
 BASE_DIR=$(pwd)
-# UPDATED: Pointing to the compile directory
-PROGRAM="$BASE_DIR/compile/task1_MPI_v1"
+PROGRAM="$BASE_DIR/task1_MPI_v1"
 
 mkdir -p "$BASE_DIR/time"
 CSV_FILE="$BASE_DIR/time/task1_MPI_v1_P.csv"
@@ -28,8 +27,7 @@ echo "--------------------------------------------------------"
 
 for PROCS in "$@"
 do
-    # UPDATED: Using srun for the CAAS cluster instead of mpirun
-    OUTPUT=$(srun -n $PROCS "$PROGRAM" $N)
+    OUTPUT=$(mpirun -np $PROCS "$PROGRAM" $N)
     
     # Isolate metrics
     COMP_TIME=$(echo "$OUTPUT" | grep "Computation Time:" | awk '{print $3}')

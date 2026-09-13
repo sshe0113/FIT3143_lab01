@@ -3,71 +3,141 @@
 ```
 docker exec -it <ID> bash
 ```
+```
+ssh <credential>@student-caas-headnode.rep.monash.edu
+```
 
-Make sure you're in **Lab 02** directory.  
+Copy required working directory to CAAS
+```
+scp <target file> <credential>@student-caas-headnode.rep.monash.edu:<filename>
+```
+Place `scp -r ...` if you want to copy folder.  
+
+Change the order if you want to copy file/folder from CAAS to your local.  
+
+Before compiling c code, make sure you're in target directory in **CAAS** environment.
 
 ## Serial Code
-Compile c code
+Compile c code at **headnode:**
 ```
 gcc task/task1_Serial.c -o compile/task1_Serial -lm
 ```
 
 For **single N:**
 ```
-./compile/task1_Serial <N>
+srun --nodes=1 --ntasks=1 --cpus-per-task=1 --partition=defq ./compile/task1_Serial <N>
 ```
-
-For **multiple N:**
-```
-bash script/task1_Serial.sh
-```
-This will automatically generate csv file to record the overall time and computational time for N from 10,000,000 to 40,000,000, increases by 1,000,000.  
-The csv file was automatically places under time folder.
 
 ## POSIX
-Compile c code
+Compile c code at **headnode:**
 ```
 gcc task/task1_POSIX.c -o compile/task1_POSIX -lm -lpthread
 ```
 
 For **single N:** 
 ```
-./compile/task1_POSIX <N> <# of threads>
+srun --nodes=1 --ntasks=1 --cpus-per-task=<threads> --partition=defq ./compile/task1_POSIX <N> <threads>
 ```
-
-Replace `<N>` and `<# of threads>`.
-
-For **multiple N:** 
-```
-bash script/task1_POSIX_N.sh <# of threads>
-```
-This will automatically generate csv file to record the overall time and computational time for N from 10,000,000 to 40,000,000, increases by 1,000,000, with `<# of threads>` threads (replace this in command line).  
-
-For **multiple threads** with fixed N = 10,000,000:
-```
-bash script/task1_POSIX_T.sh <a sequence of # of threads>
-```
-Example: `bash script/task1_POSIX_T.sh 1 2 4 8 16 32`
 
 ## OpenMP
-Compile c code
+Compile c code at **headnode:**
 ```
 gcc task/task1_OpenMP.c -o compile/task1_OpenMP -lm -fopenmp
 ```
 
 For **single N:**
 ```
-./compile/task1_OpenMP <N> <# of threads>
+srun --nodes=1 --ntasks=1 --cpus-per-task=<threads> --partition=defq ./compile/task1_OpenMP <N> <threads>
 ```
 
-For **multiple N:** 
-```
-bash script/task1_OpenMP_N.sh <# of threads>
-```
-This will automatically generate csv file to record the overall time and computational time for N from 10,000,000 to 40,000,000, increases by 1,000,000, with `<# of threads>` threads (replace this in command line).  
+## Open MPI
 
-For **multiple threads** with fixed N = 10,000,000:
+Load the specific Open MPI software used by the CAAS cluster:
 ```
-bash script/task1_OpenMP_T.sh <a sequence of # of threads>
+module load openmpi/4.1.5-gcc-11.2.0-ux65npg
 ```
-Example: `bash script/task1_OpenMP_T.sh 1 2 4 8 16 32`
+
+Compile c code at **headnode:**
+```
+mpicc task/task1_MPI_v1.c -o compile/task1_MPI_v1 -lm
+```
+```
+srun --nodes=1 --ntasks=<processes> --cpus-per-task=1 --partition=defq ./compile/task1_MPI_v1 <N>
+```
+Notice that CAAS has 14 computation nodes, 16 cores per each node.
+
+## Benchmark Testing for Serial, POSIX, and OpenMP
+
+Copy slurm file to CAAS from docker:
+```
+scp task1_serial_thread.slurm <credential>@student-caas-headnode.rep.monash.edu:task1_serial_thread.slurm
+```
+Compile c code at **headnode:**
+```
+gcc task/task1_Serial.c -o compile/task1_Serial -lm  
+gcc task/task1_POSIX.c -o compile/task1_POSIX -lm -lpthread  
+gcc task/task1_OpenMP.c -o compile/task1_OpenMP -lm -fopenmp
+```
+```
+sbatch task1_serial_thread.slurm
+```
+
+If it shows an error about invisible characters to mark the end of a line. Run
+```
+sed -i 's/\r$//' task1_serial_thread.slurm
+```
+
+Monitor status use `squeue`.
+
+After job completed, run
+```
+cat <output filename>.out
+```
+
+## Benchmark Testing for Open MPI
+
+Copy slurm file to CAAS from docker:
+```
+scp task1_mpi.slurm <credential>@student-caas-headnode.rep.monash.edu:task1_mpi.slurm
+```
+
+Compile c code at **headnode:**
+```
+mpicc task/task1_MPI_v1.c -o compile/task1_MPI_v1 -lm
+```
+
+```
+sbatch task1_mpi.slurm
+```
+
+## Open MPI (AWS)
+
+Make sure you're accesses AWS ParallelCluster.  
+
+Copy `task1_MPI_v1.c` into EC2
+```
+nano task1_MPI_v1.c
+```
+
+Copy automate testing bash scripts into EC2
+```
+nano task1_MPI_N.sh
+```
+```
+nano task1_MPI_P.sh
+```
+```
+nano task1_job.sh
+```
+
+Running bash scripts
+```
+sbatch task1_job.sh
+```
+
+Using `squeue` and `sinfo` to see the current status.  
+
+Once completed, run
+```
+cat mpi-<jobID>.out
+```

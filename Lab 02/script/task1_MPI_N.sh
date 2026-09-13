@@ -9,8 +9,7 @@ if [ "$#" -eq 0 ]; then
 fi
 
 BASE_DIR=$(pwd)
-# UPDATED: Pointing to the compile directory
-PROGRAM="$BASE_DIR/compile/task1_MPI_v1"
+PROGRAM="$BASE_DIR/task1_MPI_v1"
 
 mkdir -p "$BASE_DIR/time"
 CSV_FILE="$BASE_DIR/time/task1_MPI_v1_N.csv"
@@ -32,8 +31,8 @@ do
     # Loop through N from 10,000,000 to 40,000,000 in steps of 1,000,000
     for N in $(seq 10000000 1000000 40000000)
     do
-        # UPDATED: Using srun for the CAAS cluster instead of mpirun
-        OUTPUT=$(srun -n $PROCS "$PROGRAM" $N)
+        # Execute the MPI program
+        OUTPUT=$(mpirun -np $PROCS "$PROGRAM" $N)
         
         # Extract the precise metrics using grep and awk
         COMP_TIME=$(echo "$OUTPUT" | grep "Computation Time:" | awk '{print $3}')
