@@ -40,7 +40,10 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &processCount);
 
-    // Command-Line Parsing (Rank 0 Only)
+    /*
+     * Only rank 0 reads the command-line arguments.
+     * Usage: ./task1 <n> [chunk-size]
+     */
     if (rank == 0) {
         if (argc < 2 || argc > 3) {
             fprintf(stderr, "Usage: %s <N> [chunk-size]\n", argv[0]);
