@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 
     /*
      * Only rank 0 reads the command-line arguments.
-     * Usage: ./task1 <n> [chunk-size]
+     * Usage: ./filename <n> [chunk-size]
      */
     if (rank == 0) {
         if (argc < 2 || argc > 3) {
@@ -176,15 +176,8 @@ int main(int argc, char *argv[])
 
     // Write result to file
     if (rank == 0) {
-        if (n < 100) {
-            printf("Prime numbers less than %ld:\n", n);
-            for (long i = 2; i < n; i++) {
-                if (globalPrimeArray[i]) printf("%ld\n", i);
-            }
-        } else {
-            // Because the array naturally counts up, it is already perfectly sorted!
-            WriteToFile("task1_OpenMPI.txt", globalPrimeArray, n);
-        }
+        // Because the array naturally counts up, it is already perfectly sorted!
+        WriteToFile("task1_OpenMPI.txt", globalPrimeArray, n);
 
         // ---------------------------------------------------------
         // Overall Time End
