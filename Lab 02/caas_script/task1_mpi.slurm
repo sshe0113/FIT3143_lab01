@@ -17,11 +17,11 @@ echo "Starting CAAS MPI Benchmarks for up to 128 cores..."
 echo "--------------------------------------------------------"
 echo "1. Running N Scaling Benchmark"
 echo "--------------------------------------------------------"
-bash "$BASE_DIR/script/task1_MPI_N.sh" 8 32
+bash "$BASE_DIR/caas_script/task1_MPI_N.sh" 16
 
 echo "--------------------------------------------------------"
 echo "2. Running Process Scaling Benchmark"
 echo "--------------------------------------------------------"
-bash "$BASE_DIR/script/task1_MPI_P.sh" 1 2 4 8 16 32 64 128
+bash "$BASE_DIR/caas_script/task1_MPI_P.sh" 1 2 4 8 16 32 64 128
 
 echo "MPI benchmarks complete!"

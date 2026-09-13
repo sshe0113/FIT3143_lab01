@@ -1,15 +1,29 @@
 # Documentation
 
+To access **Docker:**
 ```
 docker exec -it <ID> bash
 ```
+To access **CAAS:** (Must connect Monash VPN)
 ```
 ssh <credential>@student-caas-headnode.rep.monash.edu
 ```
+To access **AWS:**
+```
+C:\Users\<username>\apc-ve\Scripts\activate
+```
+```
+pcluster ssh --cluster-name mycluster --region ap-southeast-5 -i <keyname>.pem
+```
+Change `ap-southeast-5` to your region.
 
-Copy required working directory to CAAS
+Copy required working directory to **CAAS:**
 ```
 scp <target file> <credential>@student-caas-headnode.rep.monash.edu:<filename>
+```
+Copy required working directory to **AWS:**
+```
+scp -i <keyname>.pem <targat file> <username>@<IP address>:<filename>
 ```
 Place `scp -r ...` if you want to copy folder.  
 
@@ -23,9 +37,14 @@ Compile c code at **headnode:**
 gcc task/task1_Serial.c -o compile/task1_Serial -lm
 ```
 
-For **single N:**
+For **single N on CAAS:**
 ```
 srun --nodes=1 --ntasks=1 --cpus-per-task=1 --partition=defq ./compile/task1_Serial <N>
+```
+
+For **single N on AWS:**
+```
+./compile/task1_Serial <N>
 ```
 
 ## POSIX
@@ -34,9 +53,14 @@ Compile c code at **headnode:**
 gcc task/task1_POSIX.c -o compile/task1_POSIX -lm -lpthread
 ```
 
-For **single N:** 
+For **single N on CAAS:**
 ```
 srun --nodes=1 --ntasks=1 --cpus-per-task=<threads> --partition=defq ./compile/task1_POSIX <N> <threads>
+```
+
+For **single N on AWS:**
+```
+./compile/task1_POSIX <N> <threads>
 ```
 
 ## OpenMP
@@ -45,9 +69,15 @@ Compile c code at **headnode:**
 gcc task/task1_OpenMP.c -o compile/task1_OpenMP -lm -fopenmp
 ```
 
-For **single N:**
+For **single N on CAAS:**
 ```
 srun --nodes=1 --ntasks=1 --cpus-per-task=<threads> --partition=defq ./compile/task1_OpenMP <N> <threads>
+```
+
+For **single N on AWS:**
+```
+export OMP_NUM_THREADS=<threads>
+./compile/task1_OpenMP <N>
 ```
 
 ## Open MPI
@@ -61,10 +91,18 @@ Compile c code at **headnode:**
 ```
 mpicc task/task1_MPI_v1.c -o compile/task1_MPI_v1 -lm
 ```
+
+For **single N on CAAS:**
 ```
 srun --nodes=1 --ntasks=<processes> --cpus-per-task=1 --partition=defq ./compile/task1_MPI_v1 <N>
 ```
 Notice that CAAS has 14 computation nodes, 16 cores per each node.
+
+For **single N on AWS:**
+```
+mpirun -np <processes> ./compile/task1_MPI_v1 <N>
+```
+Notice that AWS EC2 has 8 computation nodes, 2 vCPUs per each node.
 
 ## Benchmark Testing for Serial, POSIX, and OpenMP
 
@@ -72,6 +110,13 @@ Copy slurm file to CAAS from docker:
 ```
 scp task1_serial_thread.slurm <credential>@student-caas-headnode.rep.monash.edu:task1_serial_thread.slurm
 ```
+
+Copy slurm file to AWS from docker:
+```
+scp -i <keyname>.pem task1_serial_thread.slurm <username>@<IP address>:task1_serial_thread.slurm
+```
+Use `whoami` and `curl checkip.amazonaws.com` to check username and IP address.
+
 Compile c code at **headnode:**
 ```
 gcc task/task1_Serial.c -o compile/task1_Serial -lm  
@@ -101,6 +146,12 @@ Copy slurm file to CAAS from docker:
 scp task1_mpi.slurm <credential>@student-caas-headnode.rep.monash.edu:task1_mpi.slurm
 ```
 
+Copy slurm file to AWS from docker:
+```
+scp -i <keyname>.pem task1_mpi.slurm <username>@<IP address>:task1_mpi.slurm
+```
+Use `whoami` and `curl checkip.amazonaws.com` to check username and IP address.
+
 Compile c code at **headnode:**
 ```
 mpicc task/task1_MPI_v1.c -o compile/task1_MPI_v1 -lm
@@ -108,36 +159,4 @@ mpicc task/task1_MPI_v1.c -o compile/task1_MPI_v1 -lm
 
 ```
 sbatch task1_mpi.slurm
-```
-
-## Open MPI (AWS)
-
-Make sure you're accesses AWS ParallelCluster.  
-
-Copy `task1_MPI_v1.c` into EC2
-```
-nano task1_MPI_v1.c
-```
-
-Copy automate testing bash scripts into EC2
-```
-nano task1_MPI_N.sh
-```
-```
-nano task1_MPI_P.sh
-```
-```
-nano task1_job.sh
-```
-
-Running bash scripts
-```
-sbatch task1_job.sh
-```
-
-Using `squeue` and `sinfo` to see the current status.  
-
-Once completed, run
-```
-cat mpi-<jobID>.out
 ```

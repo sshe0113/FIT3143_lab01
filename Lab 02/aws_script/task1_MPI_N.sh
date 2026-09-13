@@ -9,7 +9,7 @@ if [ "$#" -eq 0 ]; then
 fi
 
 BASE_DIR=$(pwd)
-PROGRAM="$BASE_DIR/task1_MPI_v1"
+PROGRAM="$BASE_DIR/compile/task1_MPI_v1"
 
 mkdir -p "$BASE_DIR/time"
 CSV_FILE="$BASE_DIR/time/task1_MPI_v1_N.csv"
