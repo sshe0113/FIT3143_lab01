@@ -21,9 +21,17 @@ Copy required working directory to **CAAS:**
 ```
 scp <target file> <credential>@student-caas-headnode.rep.monash.edu:<filename>
 ```
+Copy required working directory from **CAAS:**
+```
+scp <credential>@student-caas-headnode.rep.monash.edu:<filename> ./<new name>
+```
 Copy required working directory to **AWS:**
 ```
 scp -i <keyname>.pem <targat file> <username>@<IP address>:<filename>
+```
+Copy required working directory from **AWS:**
+```
+scp -i <keyname>.pem <username>@<IP address>:<filename> ./<new name>
 ```
 Place `scp -r ...` if you want to copy folder.  
 
@@ -89,20 +97,20 @@ module load openmpi/4.1.5-gcc-11.2.0-ux65npg
 
 Compile c code at **headnode:**
 ```
-mpicc task/task1_MPI_v1.c -o compile/task1_MPI_v1 -lm
+mpicc task/task1_MPI.c -o compile/task1_MPI -lm
 ```
 
 For **single N on CAAS:**
 ```
-srun --nodes=1 --ntasks=<processes> --cpus-per-task=1 --partition=defq ./compile/task1_MPI_v1 <N>
+srun --nodes=1 --ntasks=<processes> --cpus-per-task=1 --partition=defq ./compile/task1_MPI <N> <chunksize>
 ```
 Notice that CAAS has 14 computation nodes, 16 cores per each node.
 
 For **single N on AWS:**
 ```
-mpirun -np <processes> ./compile/task1_MPI_v1 <N>
+mpirun --oversubscribe -np <processes> ./compile/task1_MPI <N> <chunksize>
 ```
-Notice that AWS EC2 has 8 computation nodes, 2 vCPUs per each node.
+Notice that AWS EC2 has maximum 8 cores.
 
 ## Benchmark Testing for Serial, POSIX, and OpenMP
 
@@ -117,12 +125,6 @@ scp -i <keyname>.pem task1_serial_thread.slurm <username>@<IP address>:task1_ser
 ```
 Use `whoami` and `curl checkip.amazonaws.com` to check username and IP address.
 
-Compile c code at **headnode:**
-```
-gcc task/task1_Serial.c -o compile/task1_Serial -lm  
-gcc task/task1_POSIX.c -o compile/task1_POSIX -lm -lpthread  
-gcc task/task1_OpenMP.c -o compile/task1_OpenMP -lm -fopenmp
-```
 ```
 sbatch task1_serial_thread.slurm
 ```
@@ -151,11 +153,6 @@ Copy slurm file to AWS from docker:
 scp -i <keyname>.pem task1_mpi.slurm <username>@<IP address>:task1_mpi.slurm
 ```
 Use `whoami` and `curl checkip.amazonaws.com` to check username and IP address.
-
-Compile c code at **headnode:**
-```
-mpicc task/task1_MPI_v1.c -o compile/task1_MPI_v1 -lm
-```
 
 ```
 sbatch task1_mpi.slurm

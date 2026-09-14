@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=serial_thread
-#SBATCH --time=01:00:00           
+#SBATCH --time=00:20:00           
 #SBATCH --mem=16G                 
 #SBATCH --nodes=1
 #SBATCH --ntasks=1                
@@ -10,6 +10,12 @@
 
 # Lock onto the current directory
 BASE_DIR=$(pwd)
+
+sed -i 's/\r$//' "$BASE_DIR/caas_script/"*.sh
+
+gcc -O3 task/task1_Serial.c -o compile/task1_Serial -lm  
+gcc -O3 task/task1_POSIX.c -o compile/task1_POSIX -lm -lpthread  
+gcc -O3 task/task1_OpenMP.c -o compile/task1_OpenMP -lm -fopenmp
 
 # Ensure OpenMP uses the allocated hardware threads
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
