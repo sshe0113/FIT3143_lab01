@@ -24,12 +24,7 @@ void WriteToFile(const char *filename, const bool *primeArray, long n);
 int main(int argc, char *argv[])
 {
     MPI_Init(&argc, &argv);
-<<<<<<< HEAD:Lab 02/task/task1_MPI.c
-
-=======
     
-    struct timespec start, end, startComm, endComm, startComp, endComp;
->>>>>>> aafc2216ee1e94cb51ed3b684438605fb83c646a:Lab 02/task/task1/task1_MPI.c
     int rank, processCount;
     double locCommTime = 0.0, locCompTime = 0.0;
     long n = -1, chunkSize = 64, validInput = 1;
@@ -148,14 +143,9 @@ int main(int argc, char *argv[])
     
     if (rank == 0) {
         globalPrimeArray = (bool *)calloc(n, sizeof(bool));
-<<<<<<< HEAD:Lab 02/task/task1_MPI.c
-        if (globalPrimeArray == NULL) {
-            fprintf(stderr, "Rank 0: memory allocation failed.\n");
-=======
 
         if (globalPrimeArray == NULL) {
             fprintf(stderr, "Rank 0: global allocation failed.\n");
->>>>>>> aafc2216ee1e94cb51ed3b684438605fb83c646a:Lab 02/task/task1/task1_MPI.c
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
     }
@@ -189,16 +179,6 @@ int main(int argc, char *argv[])
     if (rank == 0) {
         // Because the array naturally counts up, it is already perfectly sorted!
         WriteToFile("task1_OpenMPI.txt", globalPrimeArray, n);
-<<<<<<< HEAD:Lab 02/task/task1_MPI.c
-=======
-
-        // ---------------------------------------------------------
-        // Overall Time End
-        // ---------------------------------------------------------
-        clock_gettime(CLOCK_MONOTONIC, &end);
-
-        // Calculate overall time
-        overallTime = ElapsedSeconds(start, end);
 
         // Allocate memory for job counts and computation times from all processes
         allJobCounts = calloc((size_t)processCount, sizeof(long));
@@ -243,7 +223,6 @@ int main(int argc, char *argv[])
         }
         
         // Free allocated memory
->>>>>>> aafc2216ee1e94cb51ed3b684438605fb83c646a:Lab 02/task/task1/task1_MPI.c
         free(globalPrimeArray);
         free(allJobCounts);
         free(allCompTimes);
@@ -256,7 +235,7 @@ int main(int argc, char *argv[])
     // Overall Time End
     // ---------------------------------------------------------
     double localOverallTime = MPI_Wtime() - overallStart;
-    double overallTime = 0.0;
+    overallTime = 0.0;
     
     // Reduce to find the true longest overall lifespan across all nodes
     MPI_Reduce(&localOverallTime, &overallTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
