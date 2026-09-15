@@ -19,6 +19,8 @@ FIXED_N=40000000
 CHUNK_SIZE=64
 BALANCE_CSV="task1_MPI_balance.csv"
 
+mpicc task1_MPI.c -o task1_MPI_Output -lm
+
 echo "N,Processes,Chunk_Size,Computation_Time_sec,Communication_Time_sec,Overall_Time_sec" > "$CSV_FILE"
 echo "Processes,Rank,Jobs,Computation_Time_sec" > "$BALANCE_CSV"
 
