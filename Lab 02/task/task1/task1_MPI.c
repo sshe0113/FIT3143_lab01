@@ -26,7 +26,7 @@ double ElapsedSeconds(struct timespec start, struct timespec end);
 int main(int argc, char *argv[])
 {
     MPI_Init(&argc, &argv);
-
+    
     struct timespec start, end, startComm, endComm, startComp, endComp;
     int rank, processCount;
     double locCommTime = 0.0;
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
     // Block-Cyclic Distribution
     // Allocate the boolean array for this specific rank
     bool *localPrimeArray = (bool *)calloc(n, sizeof(bool));
-    long locajobCount = 0;
+    long localJobCount = 0;
 
     if (localPrimeArray == NULL) {
         fprintf(stderr, "Rank %d: memory allocation failed.\n", rank);
@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 
         for (long index = startIndex; index < endIndex; index++) {
             long candidate = 2 * index + 3;
-            locajobCount++;
+            localJobCount++;
 
             if (IsPrime(candidate)) {
                 // Instantly mapped to the correct index, no displacement math needed!
@@ -176,32 +176,14 @@ int main(int argc, char *argv[])
     double maxTimes[2] = {0.0, 0.0};
     long *allJobCounts = NULL;
     double *allCompTimes = NULL;
+    double overallTime = 0.0;
 
     // A single collective call replaces the entire MPI_Send / MPI_Recv loop block
     MPI_Reduce(localTimes, maxTimes, 2, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
-    // Write result to file
     if (rank == 0) {
         // Because the array naturally counts up, it is already perfectly sorted!
         WriteToFile("task1_OpenMPI.txt", globalPrimeArray, n);
-
-        // Allocate arrays to hold job counts and computation times for all processes
-        allJobCounts = calloc((size_t)processCount, sizeof(long));
-        allCompTimes = calloc((size_t)processCount, sizeof(double));
-
-        // Gather job counts and computation times from all processes
-        MPI_Gather(
-            &localJobCount, 1, MPI_LONG,
-            allJobCounts, 1, MPI_LONG,
-            0, MPI_COMM_WORLD
-        );
-
-        // Gather computation times from all processes
-        MPI_Gather(
-            &locCompTime, 1, MPI_DOUBLE,
-            allCompTimes, 1, MPI_DOUBLE,
-            0, MPI_COMM_WORLD
-        );
 
         // ---------------------------------------------------------
         // Overall Time End
@@ -209,7 +191,35 @@ int main(int argc, char *argv[])
         clock_gettime(CLOCK_MONOTONIC, &end);
 
         // Calculate overall time
-        double overallTime = ElapsedSeconds(start, end);
+        overallTime = ElapsedSeconds(start, end);
+
+        // Allocate memory for job counts and computation times from all processes
+        allJobCounts = calloc((size_t)processCount, sizeof(long));
+        allCompTimes = calloc((size_t)processCount, sizeof(double));
+
+        // Check for memory allocation failure
+        if (allJobCounts == NULL || allCompTimes == NULL) {
+            fprintf(stderr, "Unable to allocate rank statistics.\n");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
+    }
+
+    // Gather job counts and computation times from all processes
+    MPI_Gather(
+        &localJobCount, 1, MPI_LONG,
+        allJobCounts, 1, MPI_LONG,
+        0, MPI_COMM_WORLD
+    );
+
+    // Gather computation times from all processes
+    MPI_Gather(
+        &locCompTime, 1, MPI_DOUBLE,
+        allCompTimes, 1, MPI_DOUBLE,
+        0, MPI_COMM_WORLD
+    );
+
+    // Write result to file
+    if (rank == 0) {
 
         printf("Computation Time: %lf seconds\n", maxTimes[0]);
         printf("Communication Time: %lf seconds\n", maxTimes[1]);
@@ -225,6 +235,7 @@ int main(int argc, char *argv[])
             );
         }
         
+        // Free allocated memory
         free(globalPrimeArray);
         free(allJobCounts);
         free(allCompTimes);
