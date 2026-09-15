@@ -1,0 +1,9 @@
+N,Processes,Computation_Time_sec,Communication_Time_sec,Overall_Time_sec
+10000000,1,,,
+10000000,2,,,
+10000000,4,,,
+10000000,8,,,
+10000000,16,,,
+10000000,32,,,
+10000000,64,,,
+10000000,128,,,
