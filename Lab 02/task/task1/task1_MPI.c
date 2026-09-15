@@ -151,12 +151,14 @@ int main(int argc, char *argv[])
 
     // Boolean array to record true (prime) or false (non-prime)
     bool *globalPrimeArray = NULL;
-    if (globalPrimeArray == NULL) {
-        fprintf(stderr, "Rank 0: global allocation failed.\n");
-        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-    }
+    
     if (rank == 0) {
         globalPrimeArray = (bool *)calloc(n, sizeof(bool));
+
+        if (globalPrimeArray == NULL) {
+            fprintf(stderr, "Rank 0: global allocation failed.\n");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
     }
 
     // ---------------------------------------------------------
