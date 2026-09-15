@@ -27,16 +27,16 @@ echo "1. Running Serial Benchmark"
 echo "--------------------------------------------------------"
 bash "$BASE_DIR/caas_script/task1_Serial.sh"
 
-echo "--------------------------------------------------------"
-echo "2. Running POSIX Benchmarks"
-echo "--------------------------------------------------------"
-bash "$BASE_DIR/caas_script/task1_POSIX_N.sh" 16
-bash "$BASE_DIR/caas_script/task1_POSIX_T.sh" 1 2 4 8 16 32 64 128
+# echo "--------------------------------------------------------"
+# echo "2. Running POSIX Benchmarks"
+# echo "--------------------------------------------------------"
+# bash "$BASE_DIR/caas_script/task1_POSIX_N.sh" 16
+# bash "$BASE_DIR/caas_script/task1_POSIX_T.sh" 1 2 4 8 16 32 64 128
 
-echo "--------------------------------------------------------"
-echo "3. Running OpenMP Benchmarks"
-echo "--------------------------------------------------------"
-bash "$BASE_DIR/caas_script/task1_OpenMP_N.sh" 16
-bash "$BASE_DIR/caas_script/task1_OpenMP_T.sh" 1 2 4 8 16 32 64 128
+# echo "--------------------------------------------------------"
+# echo "3. Running OpenMP Benchmarks"
+# echo "--------------------------------------------------------"
+# bash "$BASE_DIR/caas_script/task1_OpenMP_N.sh" 16
+# bash "$BASE_DIR/caas_script/task1_OpenMP_T.sh" 1 2 4 8 16 32 64 128
 
 echo "All shared-memory benchmarks complete!"

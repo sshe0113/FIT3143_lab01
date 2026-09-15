@@ -16,34 +16,29 @@
 #include <stdbool.h>
 #include <math.h>
 #include <mpi.h>
-#include <time.h>
 
 // Function prototypes
 bool IsPrime(long candidate);
 void WriteToFile(const char *filename, const bool *primeArray, long n);
-double ElapsedSeconds(struct timespec start, struct timespec end);
 
 int main(int argc, char *argv[])
 {
     MPI_Init(&argc, &argv);
 
-    struct timespec start, end, startComm, endComm, startComp, endComp;
     int rank, processCount;
-    double locCommTime = 0.0;
+    double locCommTime = 0.0, locCompTime = 0.0;
     long n = -1, chunkSize = 64, validInput = 1;
 
     // ---------------------------------------------------------
     // Overall Time Start
     // ---------------------------------------------------------
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    double overallStart = MPI_Wtime();
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &processCount);
 
-    /*
-     * Only rank 0 reads the command-line arguments.
-     * Usage: ./filename <n> [chunk-size]
-     */
+    // Only rank 0 reads the command-line arguments.
+    // Usage: ./filename <n> [chunk-size]
     if (rank == 0) {
         if (argc < 2 || argc > 3) {
             fprintf(stderr, "Usage: %s <N> [chunk-size]\n", argv[0]);
@@ -75,17 +70,14 @@ int main(int argc, char *argv[])
     // ---------------------------------------------------------
     // Communication Time Start
     // ---------------------------------------------------------
-    clock_gettime(CLOCK_MONOTONIC, &startComm);
+    double startComm = MPI_Wtime();
 
     MPI_Bcast(bcast_data, 3, MPI_LONG, 0, MPI_COMM_WORLD);
 
     // ---------------------------------------------------------
     // Communication Time End
     // ---------------------------------------------------------
-    clock_gettime(CLOCK_MONOTONIC, &endComm);
-
-    // Accumulate communication time
-    locCommTime += ElapsedSeconds(startComm, endComm);
+    locCommTime += (MPI_Wtime() - startComm);
 
     // Unpack the variables on all non-root ranks
     if (rank != 0) {
@@ -110,7 +102,7 @@ int main(int argc, char *argv[])
     // ---------------------------------------------------------
     // Computational Time Start
     // ---------------------------------------------------------
-    clock_gettime(CLOCK_MONOTONIC, &startComp);
+    double startComp = MPI_Wtime();
 
     if (rank == 0 && n > 2) {
         localPrimeArray[2] = true;
@@ -140,21 +132,22 @@ int main(int argc, char *argv[])
     // ---------------------------------------------------------
     // Computational Time End
     // ---------------------------------------------------------
-    clock_gettime(CLOCK_MONOTONIC, &endComp);
-
-    // Accumulate computational time
-    double locCompTime = ElapsedSeconds(startComp, endComp);
+    locCompTime = MPI_Wtime() - startComp;
 
     // Boolean array to record true (prime) or false (non-prime)
     bool *globalPrimeArray = NULL;
     if (rank == 0) {
         globalPrimeArray = (bool *)calloc(n, sizeof(bool));
+        if (globalPrimeArray == NULL) {
+            fprintf(stderr, "Rank 0: memory allocation failed.\n");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
     }
 
     // ---------------------------------------------------------
     // Communication Time Start
     // ---------------------------------------------------------
-    clock_gettime(CLOCK_MONOTONIC, &startComm);
+    startComm = MPI_Wtime();
 
     // The MPI network merges all arrays into Rank 0. If any rank found a prime
     // at a specific index, MPI_LOR forces the master array index to 'true'.
@@ -163,10 +156,10 @@ int main(int argc, char *argv[])
     // ---------------------------------------------------------
     // Communication Time End
     // ---------------------------------------------------------
-    clock_gettime(CLOCK_MONOTONIC, &endComm);
-
-    // Accumulate communication time
-    locCommTime += ElapsedSeconds(startComm, endComm);
+    locCommTime += (MPI_Wtime() - startComm);
+    
+    // Free local arrays immediately
+    free(localPrimeArray);
 
     double localTimes[2] = {locCompTime, locCommTime};
     double maxTimes[2] = {0.0, 0.0};
@@ -178,24 +171,27 @@ int main(int argc, char *argv[])
     if (rank == 0) {
         // Because the array naturally counts up, it is already perfectly sorted!
         WriteToFile("task1_OpenMPI.txt", globalPrimeArray, n);
-
-        // ---------------------------------------------------------
-        // Overall Time End
-        // ---------------------------------------------------------
-        clock_gettime(CLOCK_MONOTONIC, &end);
-
-        // Calculate overall time
-        double overallTime = ElapsedSeconds(start, end);
-
-        printf("Computation Time: %lf seconds\n", maxTimes[0]);
-        printf("Communication Time: %lf seconds\n", maxTimes[1]);
-        printf("Overall Time: %lf seconds\n", overallTime);
-        
         free(globalPrimeArray);
     }
 
-    // Non-root ranks finalize immediately without waiting at a barrier
-    free(localPrimeArray);
+    // Ensure all ranks wait here before finalizing the overall timer
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // ---------------------------------------------------------
+    // Overall Time End
+    // ---------------------------------------------------------
+    double localOverallTime = MPI_Wtime() - overallStart;
+    double overallTime = 0.0;
+    
+    // Reduce to find the true longest overall lifespan across all nodes
+    MPI_Reduce(&localOverallTime, &overallTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        printf("Computation Time: %lf seconds\n", maxTimes[0]);
+        printf("Communication Time: %lf seconds\n", maxTimes[1]);
+        printf("Overall Time: %lf seconds\n", overallTime);
+    }
+
     MPI_Finalize();
     return EXIT_SUCCESS;
 }
@@ -232,10 +228,4 @@ void WriteToFile(const char *filename, const bool *primeArray, long n)
 
     fclose(pFile);
     printf("Result has been written into %s\n", filename);
-}
-
-double ElapsedSeconds(struct timespec start, struct timespec end)
-{
-    return (double)(end.tv_sec - start.tv_sec) +
-           (double)(end.tv_nsec - start.tv_nsec) / 1e9;
 }
