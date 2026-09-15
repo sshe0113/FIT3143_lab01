@@ -24,7 +24,12 @@ void WriteToFile(const char *filename, const bool *primeArray, long n);
 int main(int argc, char *argv[])
 {
     MPI_Init(&argc, &argv);
+<<<<<<< HEAD:Lab 02/task/task1_MPI.c
 
+=======
+    
+    struct timespec start, end, startComm, endComm, startComp, endComp;
+>>>>>>> aafc2216ee1e94cb51ed3b684438605fb83c646a:Lab 02/task/task1/task1_MPI.c
     int rank, processCount;
     double locCommTime = 0.0, locCompTime = 0.0;
     long n = -1, chunkSize = 64, validInput = 1;
@@ -94,6 +99,8 @@ int main(int argc, char *argv[])
     // Block-Cyclic Distribution
     // Allocate the boolean array for this specific rank
     bool *localPrimeArray = (bool *)calloc(n, sizeof(bool));
+    long localJobCount = 0;
+
     if (localPrimeArray == NULL) {
         fprintf(stderr, "Rank %d: memory allocation failed.\n", rank);
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -122,6 +129,8 @@ int main(int argc, char *argv[])
 
         for (long index = startIndex; index < endIndex; index++) {
             long candidate = 2 * index + 3;
+            localJobCount++;
+
             if (IsPrime(candidate)) {
                 // Instantly mapped to the correct index, no displacement math needed!
                 localPrimeArray[candidate] = true; 
@@ -136,10 +145,17 @@ int main(int argc, char *argv[])
 
     // Boolean array to record true (prime) or false (non-prime)
     bool *globalPrimeArray = NULL;
+    
     if (rank == 0) {
         globalPrimeArray = (bool *)calloc(n, sizeof(bool));
+<<<<<<< HEAD:Lab 02/task/task1_MPI.c
         if (globalPrimeArray == NULL) {
             fprintf(stderr, "Rank 0: memory allocation failed.\n");
+=======
+
+        if (globalPrimeArray == NULL) {
+            fprintf(stderr, "Rank 0: global allocation failed.\n");
+>>>>>>> aafc2216ee1e94cb51ed3b684438605fb83c646a:Lab 02/task/task1/task1_MPI.c
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
     }
@@ -163,15 +179,74 @@ int main(int argc, char *argv[])
 
     double localTimes[2] = {locCompTime, locCommTime};
     double maxTimes[2] = {0.0, 0.0};
+    long *allJobCounts = NULL;
+    double *allCompTimes = NULL;
+    double overallTime = 0.0;
 
     // A single collective call replaces the entire MPI_Send / MPI_Recv loop block
     MPI_Reduce(localTimes, maxTimes, 2, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
-    // Write result to file
     if (rank == 0) {
         // Because the array naturally counts up, it is already perfectly sorted!
         WriteToFile("task1_OpenMPI.txt", globalPrimeArray, n);
+<<<<<<< HEAD:Lab 02/task/task1_MPI.c
+=======
+
+        // ---------------------------------------------------------
+        // Overall Time End
+        // ---------------------------------------------------------
+        clock_gettime(CLOCK_MONOTONIC, &end);
+
+        // Calculate overall time
+        overallTime = ElapsedSeconds(start, end);
+
+        // Allocate memory for job counts and computation times from all processes
+        allJobCounts = calloc((size_t)processCount, sizeof(long));
+        allCompTimes = calloc((size_t)processCount, sizeof(double));
+
+        // Check for memory allocation failure
+        if (allJobCounts == NULL || allCompTimes == NULL) {
+            fprintf(stderr, "Unable to allocate rank statistics.\n");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
+    }
+
+    // Gather job counts and computation times from all processes
+    MPI_Gather(
+        &localJobCount, 1, MPI_LONG,
+        allJobCounts, 1, MPI_LONG,
+        0, MPI_COMM_WORLD
+    );
+
+    // Gather computation times from all processes
+    MPI_Gather(
+        &locCompTime, 1, MPI_DOUBLE,
+        allCompTimes, 1, MPI_DOUBLE,
+        0, MPI_COMM_WORLD
+    );
+
+    // Write result to file
+    if (rank == 0) {
+
+        printf("Computation Time: %lf seconds\n", maxTimes[0]);
+        printf("Communication Time: %lf seconds\n", maxTimes[1]);
+        printf("Overall Time: %lf seconds\n", overallTime);
+
+        for (int i = 0; i < processCount; i++) {
+            printf(
+                "RANK_STATS,%d,%d,%ld,%.9f\n",
+                processCount,
+                i,
+                allJobCounts[i],
+                allCompTimes[i]
+            );
+        }
+        
+        // Free allocated memory
+>>>>>>> aafc2216ee1e94cb51ed3b684438605fb83c646a:Lab 02/task/task1/task1_MPI.c
         free(globalPrimeArray);
+        free(allJobCounts);
+        free(allCompTimes);
     }
 
     // Ensure all ranks wait here before finalizing the overall timer
