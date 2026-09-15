@@ -102,6 +102,8 @@ int main(int argc, char *argv[])
     // Block-Cyclic Distribution
     // Allocate the boolean array for this specific rank
     bool *localPrimeArray = (bool *)calloc(n, sizeof(bool));
+    long locajobCount = 0;
+
     if (localPrimeArray == NULL) {
         fprintf(stderr, "Rank %d: memory allocation failed.\n", rank);
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -130,6 +132,8 @@ int main(int argc, char *argv[])
 
         for (long index = startIndex; index < endIndex; index++) {
             long candidate = 2 * index + 3;
+            locajobCount++;
+
             if (IsPrime(candidate)) {
                 // Instantly mapped to the correct index, no displacement math needed!
                 localPrimeArray[candidate] = true; 
@@ -170,6 +174,8 @@ int main(int argc, char *argv[])
 
     double localTimes[2] = {locCompTime, locCommTime};
     double maxTimes[2] = {0.0, 0.0};
+    long *allJobCounts = NULL;
+    double *allCompTimes = NULL;
 
     // A single collective call replaces the entire MPI_Send / MPI_Recv loop block
     MPI_Reduce(localTimes, maxTimes, 2, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
@@ -178,6 +184,24 @@ int main(int argc, char *argv[])
     if (rank == 0) {
         // Because the array naturally counts up, it is already perfectly sorted!
         WriteToFile("task1_OpenMPI.txt", globalPrimeArray, n);
+
+        // Allocate arrays to hold job counts and computation times for all processes
+        allJobCounts = calloc((size_t)processCount, sizeof(long));
+        allCompTimes = calloc((size_t)processCount, sizeof(double));
+
+        // Gather job counts and computation times from all processes
+        MPI_Gather(
+            &localJobCount, 1, MPI_LONG,
+            allJobCounts, 1, MPI_LONG,
+            0, MPI_COMM_WORLD
+        );
+
+        // Gather computation times from all processes
+        MPI_Gather(
+            &locCompTime, 1, MPI_DOUBLE,
+            allCompTimes, 1, MPI_DOUBLE,
+            0, MPI_COMM_WORLD
+        );
 
         // ---------------------------------------------------------
         // Overall Time End
@@ -190,8 +214,20 @@ int main(int argc, char *argv[])
         printf("Computation Time: %lf seconds\n", maxTimes[0]);
         printf("Communication Time: %lf seconds\n", maxTimes[1]);
         printf("Overall Time: %lf seconds\n", overallTime);
+
+        for (int i = 0; i < processCount; i++) {
+            printf(
+                "RANK_STATS,%d,%d,%ld,%.9f\n",
+                processCount,
+                i,
+                allJobCounts[i],
+                allCompTimes[i]
+            );
+        }
         
         free(globalPrimeArray);
+        free(allJobCounts);
+        free(allCompTimes);
     }
 
     // Non-root ranks finalize immediately without waiting at a barrier
