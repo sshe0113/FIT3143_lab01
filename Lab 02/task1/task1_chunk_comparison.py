@@ -7,7 +7,7 @@ import pandas as pd
 
 
 CHUNK_SIZES = (1, 16, 32, 64)
-PROCESS_COUNTS = (1, 2, 4, 8, 16, 32, 128)
+PROCESS_COUNTS = (1, 2, 4, 8, 16, 32, 64)
 
 
 def load_results(input_dir: Path):

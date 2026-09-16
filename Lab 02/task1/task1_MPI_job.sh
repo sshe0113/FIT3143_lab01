@@ -5,7 +5,6 @@
 #SBATCH --nodes=8
 #SBATCH --ntasks=128
 #SBATCH --cpus-per-task=1
-#SBATCH --ntasks-per-node=16
 #SBATCH --partition=defq
 #SBATCH --output=task1_MPI_chunks_%j.out
 #SBATCH --error=task1_MPI_chunks_%j.err
@@ -32,7 +31,7 @@ for CHUNK_SIZE in 1 16 32 64; do
     echo "Starting tests with chunk size $CHUNK_SIZE"
     echo "========================================================"
 
-    for PROCESSES in 1 2 4 8 16 32 128; do
+    for PROCESSES in 1 2 4 8 16 32 64; do
         echo "Running chunk=$CHUNK_SIZE with P=$PROCESSES..."
 
         RUN_NODES=$(((PROCESSES + 15) / 16))
