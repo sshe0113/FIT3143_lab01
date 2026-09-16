@@ -7,8 +7,6 @@
 #SBATCH --ntasks-per-node=8
 #SBATCH --cpus-per-task=2
 #SBATCH --partition=defq
-#SBATCH --output=task3_Hybrid_P_%j.out
-#SBATCH --error=task3_Hybrid_P_%j.err
 
 set -u
 
@@ -46,7 +44,7 @@ export OMP_PROC_BIND=close
 
 TASKS_PER_NODE=$((CORES_PER_NODE / THREADS))
 
-for CHUNK_SIZE in 1 64; do
+for CHUNK_SIZE in 1 16 32; do
     CSV_FILE="$RESULT_DIR/task3_Hybrid_P_T${THREADS}_C${CHUNK_SIZE}.csv"
 
     echo "N,Chunk_Size,Processes,Threads_Per_Process,Total_Workers,Computational_Time_sec,Communication_Time_sec,Overall_Time_sec" > "$CSV_FILE"

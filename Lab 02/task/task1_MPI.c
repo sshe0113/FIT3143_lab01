@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     
     int rank, processCount;
     double locCommTime = 0.0, locCompTime = 0.0;
-    long n = -1, chunkSize = 64, validInput = 1;
+    long n = -1, chunkSize = 16, validInput = 1;
 
     // ---------------------------------------------------------
     // Overall Time Start
