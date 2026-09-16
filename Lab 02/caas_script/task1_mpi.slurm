@@ -21,7 +21,7 @@ echo "1. Running N Scaling Benchmark"
 echo "--------------------------------------------------------"
 bash "$BASE_DIR/caas_script/task1_MPI_N.sh" 1 16 # Chunk size of 1
 mv time/task1_MPI_N.csv time/task1_MPI_N_1.csv
-bash "$BASE_DIR/caas_script/task1_MPI_N.sh" 64 16 # Chunk size of 64
+bash "$BASE_DIR/caas_script/task1_MPI_N.sh" 16 16 # Chunk size of 16
 mv time/task1_MPI_N.csv time/task1_MPI_N_64.csv
 
 echo "--------------------------------------------------------"
@@ -29,7 +29,7 @@ echo "2. Running Process Scaling Benchmark"
 echo "--------------------------------------------------------"
 bash "$BASE_DIR/caas_script/task1_MPI_P.sh" 1 1 2 4 8 16 32 64 128
 mv time/task1_MPI_P.csv time/task1_MPI_P_1.csv
-bash "$BASE_DIR/caas_script/task1_MPI_P.sh" 64 1 2 4 8 16 32 64 128
+bash "$BASE_DIR/caas_script/task1_MPI_P.sh" 16 1 2 4 8 16 32 64 128
 mv time/task1_MPI_P.csv time/task1_MPI_P_64.csv
 
 echo "MPI benchmarks complete!"

@@ -91,7 +91,6 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    // Block-Cyclic Distribution
     // Allocate the boolean array for this specific rank
     bool *localPrimeArray = (bool *)calloc(n, sizeof(bool));
     long localJobCount = 0;
@@ -127,7 +126,6 @@ int main(int argc, char *argv[])
             localJobCount++;
 
             if (IsPrime(candidate)) {
-                // Instantly mapped to the correct index, no displacement math needed!
                 localPrimeArray[candidate] = true; 
             }
         }
@@ -207,11 +205,6 @@ int main(int argc, char *argv[])
 
     // Write result to file
     if (rank == 0) {
-
-        printf("Computation Time: %lf seconds\n", maxTimes[0]);
-        printf("Communication Time: %lf seconds\n", maxTimes[1]);
-        printf("Overall Time: %lf seconds\n", overallTime);
-
         for (int i = 0; i < processCount; i++) {
             printf(
                 "RANK_STATS,%d,%d,%ld,%.9f\n",

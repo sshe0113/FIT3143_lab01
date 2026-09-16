@@ -23,7 +23,7 @@ echo "--------------------------------------------------------"
 echo "Hybrid vs. Open MPI (Processes = 4)"
 echo "--------------------------------------------------------"
 # Arguments: <chunk_size> <fixed_procs> <thread1> <thread2> ...
-bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 64 4 1 2 4 8 16 32 64 128 # Block-Cyclic
+bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 16 4 1 2 4 8 16 32 64 128 # Block-Cyclic
 mv time/task2_Hybrid.csv time/task2_Hybrid_64_T.csv
 bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 1 4 1 2 4 8 16 32 64 128 # Cyclic
 mv time/task2_Hybrid.csv time/task2_Hybrid_1_T.csv
@@ -32,14 +32,14 @@ echo "--------------------------------------------------------"
 echo "Hybrid vs. POSIX / OpenMP (Matching Total Workers)"
 echo "--------------------------------------------------------"
 # Hybrid Combinations (Processes x Threads = Total Workers)
-bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 64 1 1   # 1 Workers
-bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 64 1 2   # 2 Workers
-bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 64 2 2   # 4 Workers
-bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 64 2 4   # 8 Workers
-bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 64 4 4   # 16 Workers
-bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 64 4 8   # 32 Workers
-bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 64 8 8   # 64 Workers
-bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 64 8 16  # 128 Workers
+bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 16 1 1   # 1 Workers
+bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 16 1 2   # 2 Workers
+bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 16 2 2   # 4 Workers
+bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 16 2 4   # 8 Workers
+bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 16 4 4   # 16 Workers
+bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 16 4 8   # 32 Workers
+bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 16 8 8   # 64 Workers
+bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 16 8 16  # 128 Workers
 mv time/task2_Hybrid.csv time/task2_Hybrid_64_W.csv
 
 bash "$BASE_DIR/caas_script/task2_Hybrid.sh" 1 1 1   # 1 Workers
