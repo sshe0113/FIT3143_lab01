@@ -24,10 +24,10 @@ void WriteToFile(const char *filename, const bool *primeArray, long n);
 int main(int argc, char *argv[])
 {
     MPI_Init(&argc, &argv);
-    
+
     int rank, processCount;
     double locCommTime = 0.0, locCompTime = 0.0;
-    long n = -1, chunkSize = 16, validInput = 1;
+    long n = -1, chunkSize = 32, validInput = 1;
 
     // ---------------------------------------------------------
     // Overall Time Start
@@ -77,8 +77,7 @@ int main(int argc, char *argv[])
     // ---------------------------------------------------------
     // Communication Time End
     // ---------------------------------------------------------
-    locCommTime += (MPI_Wtime() - startComm);
-
+    locCommTime += MPI_Wtime() - startComm;    
     // Unpack the variables on all non-root ranks
     if (rank != 0) {
         validInput = bcast_data[0];
@@ -92,8 +91,7 @@ int main(int argc, char *argv[])
     }
 
     // Allocate the boolean array for this specific rank
-    bool *localPrimeArray = (bool *)calloc(n, sizeof(bool));
-    long localJobCount = 0;
+    bool *localPrimeArray = (bool *)calloc((size_t)n, sizeof(bool));
 
     if (localPrimeArray == NULL) {
         fprintf(stderr, "Rank %d: memory allocation failed.\n", rank);
@@ -123,10 +121,9 @@ int main(int argc, char *argv[])
 
         for (long index = startIndex; index < endIndex; index++) {
             long candidate = 2 * index + 3;
-            localJobCount++;
 
             if (IsPrime(candidate)) {
-                localPrimeArray[candidate] = true; 
+                localPrimeArray[candidate] = true;
             }
         }
     }
@@ -138,9 +135,9 @@ int main(int argc, char *argv[])
 
     // Boolean array to record true (prime) or false (non-prime)
     bool *globalPrimeArray = NULL;
-    
+
     if (rank == 0) {
-        globalPrimeArray = (bool *)calloc(n, sizeof(bool));
+        globalPrimeArray = (bool *)calloc((size_t)n, sizeof(bool));
 
         if (globalPrimeArray == NULL) {
             fprintf(stderr, "Rank 0: global allocation failed.\n");
@@ -155,70 +152,30 @@ int main(int argc, char *argv[])
 
     // The MPI network merges all arrays into Rank 0. If any rank found a prime
     // at a specific index, MPI_LOR forces the master array index to 'true'.
-    MPI_Reduce(localPrimeArray, globalPrimeArray, n, MPI_C_BOOL, MPI_LOR, 0, MPI_COMM_WORLD);
+    MPI_Reduce(localPrimeArray, globalPrimeArray, (int)n, MPI_C_BOOL,
+               MPI_LOR, 0, MPI_COMM_WORLD);
 
     // ---------------------------------------------------------
     // Communication Time End
     // ---------------------------------------------------------
-    locCommTime += (MPI_Wtime() - startComm);
-    
+    locCommTime += MPI_Wtime() - startComm;
     // Free local arrays immediately
     free(localPrimeArray);
 
     double localTimes[2] = {locCompTime, locCommTime};
     double maxTimes[2] = {0.0, 0.0};
-    long *allJobCounts = NULL;
-    double *allCompTimes = NULL;
     double overallTime = 0.0;
 
     // A single collective call replaces the entire MPI_Send / MPI_Recv loop block
-    MPI_Reduce(localTimes, maxTimes, 2, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(localTimes, maxTimes, 2, MPI_DOUBLE, MPI_MAX,
+               0, MPI_COMM_WORLD);
 
     if (rank == 0) {
         // Because the array naturally counts up, it is already perfectly sorted!
         WriteToFile("task1_OpenMPI.txt", globalPrimeArray, n);
 
-        // Allocate memory for job counts and computation times from all processes
-        allJobCounts = calloc((size_t)processCount, sizeof(long));
-        allCompTimes = calloc((size_t)processCount, sizeof(double));
-
-        // Check for memory allocation failure
-        if (allJobCounts == NULL || allCompTimes == NULL) {
-            fprintf(stderr, "Unable to allocate rank statistics.\n");
-            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-        }
-    }
-
-    // Gather job counts and computation times from all processes
-    MPI_Gather(
-        &localJobCount, 1, MPI_LONG,
-        allJobCounts, 1, MPI_LONG,
-        0, MPI_COMM_WORLD
-    );
-
-    // Gather computation times from all processes
-    MPI_Gather(
-        &locCompTime, 1, MPI_DOUBLE,
-        allCompTimes, 1, MPI_DOUBLE,
-        0, MPI_COMM_WORLD
-    );
-
-    // Write result to file
-    if (rank == 0) {
-        for (int i = 0; i < processCount; i++) {
-            printf(
-                "RANK_STATS,%d,%d,%ld,%.9f\n",
-                processCount,
-                i,
-                allJobCounts[i],
-                allCompTimes[i]
-            );
-        }
-        
         // Free allocated memory
         free(globalPrimeArray);
-        free(allJobCounts);
-        free(allCompTimes);
     }
 
     // Ensure all ranks wait here before finalizing the overall timer
@@ -228,10 +185,10 @@ int main(int argc, char *argv[])
     // Overall Time End
     // ---------------------------------------------------------
     double localOverallTime = MPI_Wtime() - overallStart;
-    overallTime = 0.0;
-    
+
     // Reduce to find the true longest overall lifespan across all nodes
-    MPI_Reduce(&localOverallTime, &overallTime, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&localOverallTime, &overallTime, 1, MPI_DOUBLE,
+               MPI_MAX, 0, MPI_COMM_WORLD);
 
     if (rank == 0) {
         printf("Computation Time: %lf seconds\n", maxTimes[0]);
