@@ -143,7 +143,7 @@ def main():
         "--input-dir",
         type=Path,
         default=Path(
-            r"C:\Users\User\Documents\MONASH\Year_3_sem_1\FIT3143\Week 04\FIT3143_lab01\Lab 02\task\task1"
+            r"C:\Users\User\Documents\MONASH\Year_3_sem_1\FIT3143\Week 04\FIT3143_lab01\Lab 02\task1"
         ),
     )
     parser.add_argument(
