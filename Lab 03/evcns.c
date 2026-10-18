@@ -154,7 +154,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                     comp_start_time = MPI_Wtime();
                     #pragma omp critical  // Mutex lock
                     {  
-                        ports[thread_id] = (rand() % 100 < 80) ? 0 : 1;  // 80% of ports are utilized, 20% stalls
+                        ports[thread_id] = (rand() % 100 < 70) ? 0 : 1;  // 80% of ports are utilized, 20% stalls
                     }
                     comp_time += (MPI_Wtime() - comp_start_time);
                     last_update = MPI_Wtime();
