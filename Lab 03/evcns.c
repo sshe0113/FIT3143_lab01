@@ -267,6 +267,9 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                     comm_start_time = MPI_Wtime();
                     MPI_Recv(reply_coords, 2, MPI_INT, global_size - 1, MSG_BS_REPLY, world_comm, MPI_STATUS_IGNORE);
                     comm_time += (MPI_Wtime() - comm_start_time);
+
+                    printf("[Node Rank %d at (%d,%d)] Forwarding nearest available port at (%d,%d) to EVs.\n", global_rank, coord[0], coord[1], reply_coords[0], reply_coords[1]);
+                    fflush(stdout);
                 }
 
                 // Local congestion checking and neighbors communication
