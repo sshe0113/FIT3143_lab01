@@ -87,6 +87,27 @@ void CreateDataType(MPI_Datatype *report_type) {
     MPI_Type_commit(report_type);
 }
 
+void PrintGridSnapshot(FILE *log_file, double timestamp, int nrows, int ncols, int grid_state[nrows][ncols], int alert_row, int alert_col, int best_row, int best_col) {
+    /**
+     * Snapshot for the mesh topology.
+     */
+
+    fprintf(log_file, "----- Grid Snapshot at %.2fs -----\n", timestamp);
+    for (int r = 0; r < nrows; r++) {
+        for (int c = 0; c < ncols; c++) {
+            if (r == alert_row && c == alert_col) {
+                fprintf(log_file, "(%d,%d)[!!]:%d\t", r, c, grid_state[r][c]);
+            } else if (r == best_row && c == best_col) {
+                fprintf(log_file, "(%d,%d)[OK]:%d\t", r, c, grid_state[r][c]);
+            } else {
+                fprintf(log_file, "(%d,%d):%d\t", r, c, grid_state[r][c]);
+            }
+        }
+        fprintf(log_file, "\n");
+    }
+    fprintf(log_file, "--------------------------------\n\n");
+}
+
 //===========================================
 // EV Charging Node
 //===========================================
@@ -246,7 +267,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                     if (loc_avail_ports < THRESHOLD) {
                         int req = 1; // Just a dummy variable to send something
                         int neighbors[4] = {nbr_i_lo, nbr_i_hi, nbr_j_lo, nbr_j_hi};
-                        int neigh_ports[4] = {-1, -1, -1, -1};
+                        int neigh_ports[4] = {NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR};
                         int req_count = 0;
                         
                         MPI_Request reqs[4], recv[4];
