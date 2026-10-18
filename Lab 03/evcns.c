@@ -185,6 +185,18 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                             MPI_Send(&curr_avail, 1, MPI_INT, drain_status.MPI_SOURCE, MSG_RES_NEIGHBOR, comm2D);
                             comm_time += (MPI_Wtime() - comm_start_time);
                         }
+
+                        int bs_flag;
+                        comm_start_time = MPI_Wtime();
+                        MPI_Iprobe(global_size - 1, MSG_BS_REPLY, world_comm, &bs_flag, MPI_STATUS_IGNORE);
+                        comm_time += (MPI_Wtime() - comm_start_time);
+
+                        if (bs_flag) {
+                            int dummy_coords[2];
+                            comm_start_time = MPI_Wtime();
+                            MPI_Recv(dummy_coords, 2, MPI_INT, global_size - 1, MSG_BS_REPLY, world_comm, MPI_STATUS_IGNORE);
+                            comm_time += (MPI_Wtime() - comm_start_time);
+                        }
                     }
                     break;
                 }
@@ -236,24 +248,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                         int neighbors[4] = {nbr_i_lo, nbr_i_hi, nbr_j_lo, nbr_j_hi};
                         int neigh_ports[4] = {-1, -1, -1, -1};
                         int req_count = 0;
-
-                        //---------------------------------
-                        // Original: Using MPI_Send & MPI_Recv
-                        //---------------------------------
-                        /*
-                        for (int i = 0; i < 4; i++) {
-                            if (neighbors[i] != MPI_PROC_NULL) {
-                                MPI_Send(&req, 1, MPI_INT, neighbors[i], MSG_REQ_NEIGHBOR, comm2D);
-                                MPI_Recv(&neigh_ports[i], 1, MPI_INT, neighbors[i], MSG_RES_NEIGHBOR, comm2D, MPI_STATUS_IGNORE);
-                                req_count++;
-                            }
-                        }
-                        */
-                        //---------------------------------
                         
-                        //---------------------------------
-                        // Optimization: Using MPI_Isend & MPI_Irecv
-                        //---------------------------------
                         MPI_Request reqs[4], recv[4];
                         comm_start_time = MPI_Wtime();
                         for (int i = 0; i < 4; i++) {
@@ -265,11 +260,46 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                         }
 
                         if (req_count > 0) {
+                            bool wait_done = false;
+                            while (!wait_done) {
+                                int recv_flag = 0;
+                                comm_start_time = MPI_Wtime();
+                                MPI_Testall(req_count, recv, &recv_flag, MPI_STATUSES_IGNORE);
+                                comm_time += (MPI_Wtime() - comm_start_time);
+
+                                if (recv_flag) {
+                                    wait_done = true;
+                                } else {
+                                    int inc_flag;
+                                    MPI_Status inc_status;
+                                    comm_start_time = MPI_Wtime();
+                                    MPI_Iprobe(MPI_ANY_SOURCE, MSG_REQ_NEIGHBOR, comm2D, &inc_flag, &inc_status);
+                                    comm_time += (MPI_Wtime() - comm_start_time);
+
+                                    if (inc_flag) {
+                                        int inc_sig;
+                                        comm_start_time = MPI_Wtime();
+                                        MPI_Recv(&inc_sig, 1, MPI_INT, inc_status.MPI_SOURCE, MSG_REQ_NEIGHBOR, comm2D, MPI_STATUS_IGNORE);
+                                        comm_time += (MPI_Wtime() - comm_start_time);
+
+                                        int curr_avail = 0;
+                                        #pragma omp critical 
+                                        {
+                                            for (int p = 0; p < NUM_PORTS; p++) curr_avail += ports[p];
+                                        }
+
+                                        comm_start_time = MPI_Wtime();
+                                        MPI_Send(&curr_avail, 1, MPI_INT, inc_status.MPI_SOURCE, MSG_RES_NEIGHBOR, comm2D);
+                                        comm_time += (MPI_Wtime() - comm_start_time);
+                                    } else {
+                                        usleep(1000);
+                                    }
+                                }
+                            }
+                            comm_start_time = MPI_Wtime();
                             MPI_Waitall(req_count, reqs, MPI_STATUSES_IGNORE);
-                            MPI_Waitall(req_count, recv, MPI_STATUSES_IGNORE);
+                            comm_time += (MPI_Wtime() - comm_start_time);
                         }
-                        comm_time += (MPI_Wtime() - comm_start_time);
-                        //---------------------------------
 
                         // Check neither it nor its immediate neighbors have any available ports
                         bool all_neigh_full = true;
@@ -374,29 +404,6 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                 ttl_events += report.msg_exchanged + 1;
                 grid_state[report.coords[0]][report.coords[1]] = report.avail_ports;  // Update status
 
-                //---------------------------------
-                // Original: Brute-Force
-                //---------------------------------
-                /*
-                int best_row = -1, best_col = -1, min_dist = 999999;
-                for (int r = 0; r < nrows; r++) {
-                    for (int c = 0; c < ncols; c++) {
-                        if (grid_state[r][c] >= THRESHOLD && (r != report.coords[0] || c != report.coords[1])) {
-                            int dist = abs(r - report.coords[0]) + abs(c - report.coords[1]);
-                            if (dist < min_dist) {
-                                min_dist = dist;
-                                best_row = r;
-                                best_col = c;
-                            }
-                        }
-                    }
-                }
-                */
-                //---------------------------------
-
-                //---------------------------------
-                // Optimization: A BFS for available ports by expanding outward in a ripple-like manner
-                //---------------------------------
                 int best_row = -1, best_col = -1;
                 int max_dist = nrows + ncols;
                 bool found = false;
@@ -431,7 +438,6 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                         }
                     }
                 }
-                //---------------------------------
 
                 // Reply back to that congestion node for available ports
                 int reply_coords[2] = {best_row, best_col};
@@ -540,7 +546,7 @@ int main(int argc, char **argv) {
         ncols = atoi(argv[2]);
     }
 
-    if ((nrows * ncols) != (size - 1)) {  // Must be a node as the base station
+    if ((nrows * ncols) != (size - 1)) {  // There must be a node as the base station
         if (rank == 0) {
             printf("Error: nrows * ncols (%d*%d) must be equal to slave size (%d)\n", nrows, ncols, size - 1);
             fflush(stdout);
