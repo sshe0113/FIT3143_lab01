@@ -465,12 +465,12 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                     {report.coords[0] - 1, report.coords[1]},  // Top
                     {report.coords[0] + 1, report.coords[1]},  // Bottom
                     {report.coords[0], report.coords[1] - 1},  // Left
-                    {report.coords[0], report.coords[1] - 1}   // Right
+                    {report.coords[0], report.coords[1] + 1}   // Right
                 };
 
                 for (int i = 0; i < 4; i++) {
-                    if (report.avail_neigh[1] != NO_NEIGHBOR) {
-                        grid_state[nbr_coords[1][0]][nbr_coords[i][1]] = report.avail_neigh[i];
+                    if (report.avail_neigh[i] != NO_NEIGHBOR) {
+                        grid_state[nbr_coords[i][0]][nbr_coords[i][1]] = report.avail_neigh[i];
                     }
                 }
 
