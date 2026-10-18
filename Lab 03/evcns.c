@@ -456,7 +456,23 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                 comp_start_time = MPI_Wtime();
                 ttl_alerts++;
                 ttl_events += report.msg_exchanged + 1;
-                grid_state[report.coords[0]][report.coords[1]] = report.avail_ports;  // Update status
+
+                // Update status of this congestion node
+                grid_state[report.coords[0]][report.coords[1]] = report.avail_ports;
+
+                // Update neighbors' status of this congestion node
+                int nbr_coords[4][2] = {
+                    {report.coords[0] - 1, report.coords[1]},  // Top
+                    {report.coords[0] + 1, report.coords[1]},  // Bottom
+                    {report.coords[0], report.coords[1] - 1},  // Left
+                    {report.coords[0], report.coords[1] - 1}   // Right
+                };
+
+                for (int i = 0; i < 4; i++) {
+                    if (report.avail_neigh[1] != NO_NEIGHBOR) {
+                        grid_state[nbr_coords[1][0]][nbr_coords[i][1]] = report.avail_neigh[i];
+                    }
+                }
 
                 int best_row = -1, best_col = -1;
                 int max_dist = nrows + ncols;
