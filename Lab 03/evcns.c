@@ -224,9 +224,13 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                         comm_time += (MPI_Wtime() - comm_start_time);
 
                         if (bs_flag) {
-                            int dummy_coords[2];
+                            int dummy_count;
                             comm_start_time = MPI_Wtime();
-                            MPI_Recv(dummy_coords, 2, MPI_INT, global_size - 1, MSG_BS_REPLY, world_comm, MPI_STATUS_IGNORE);
+                            MPI_Recv(&dummy_count, 1, MPI_INT, global_size - 1, MSG_BS_REPLY, world_comm, MPI_STATUS_IGNORE);
+                            if (dummy_count > 0) {
+                                int dummy_coords[16];
+                                MPI_Recv(dummy_coords, dummy_count * 2, MPI_INT, global_size - 1, MSG_BS_REPLY, world_comm, MPI_STATUS_IGNORE);
+                            }
                             comm_time += (MPI_Wtime() - comm_start_time);
                         }
                     }
@@ -263,13 +267,26 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                 comm_time += (MPI_Wtime() - comm_start_time);
 
                 if (flag) {
-                    int reply_coords[2];
+                    int found_count;
                     comm_start_time = MPI_Wtime();
-                    MPI_Recv(reply_coords, 2, MPI_INT, global_size - 1, MSG_BS_REPLY, world_comm, MPI_STATUS_IGNORE);
-                    comm_time += (MPI_Wtime() - comm_start_time);
+                    // The number of available nodes found by the Base Station
+                    MPI_Recv(&found_count, 1, MPI_INT, global_size - 1, MSG_BS_REPLY, world_comm, MPI_STATUS_IGNORE);
 
-                    printf("[Node Rank %d at (%d,%d)] Forwarding nearest available port at (%d,%d) to EVs.\n", global_rank, coord[0], coord[1], reply_coords[0], reply_coords[1]);
-                    fflush(stdout);
+                    if (found_count == 0) {  // No available nodes
+                        printf("[Node Rank %d at (%d,%d)] No available nodes nearby\n", global_rank, coord[0], coord[1]);
+                        fflush(stdout);
+                    } else {
+                        int reply_coords[16];  // Maximum 8 coordinates
+                        MPI_Recv(reply_coords, found_count * 2, MPI_INT, global_size - 1, MSG_BS_REPLY, world_comm, MPI_STATUS_IGNORE);  // Receive the coordinates from the same distance
+
+                        printf("[Node Rank %d at (%d,%d)] Nearest has %d available node(s): ", global_rank, coord[0], coord[1], found_count);
+                        for (int i = 0; i < found_count; i++) {
+                            printf("(%d,%d) ", reply_coords[i * 2], reply_coords[i * 2 + 1]);
+                        }
+                        printf("to EVs\n");
+                    }
+                    fflush(stdout);                    
+                    comm_time += (MPI_Wtime() - comm_start_time);
                 }
 
                 // Local congestion checking and neighbors communication
@@ -289,7 +306,24 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                         int neigh_ports[4] = {NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR};
                         int req_count = 0;
                         comp_time += (MPI_Wtime() - comp_start_time);
+
+                        //---------------------------------
+                        // Original: Using MPI_Send & MPI_Recv
+                        //---------------------------------
+                        /*
+                        for (int i = 0; i < 4; i++) {
+                            if (neighbors[i] != MPI_PROC_NULL) {
+                                MPI_Send(&req, 1, MPI_INT, neighbors[i], MSG_REQ_NEIGHBOR, comm2D);
+                                MPI_Recv(&neigh_ports[i], 1, MPI_INT, neighbors[i], MSG_RES_NEIGHBOR, comm2D, MPI_STATUS_IGNORE);
+                                req_count++;
+                            }
+                        }
+                        */
+                        //---------------------------------
                         
+                        //---------------------------------
+                        // Optimization: Using MPI_Isend & MPI_Irecv
+                        //---------------------------------
                         MPI_Request reqs[4], recv[4];
                         comm_start_time = MPI_Wtime();
                         for (int i = 0; i < 4; i++) {
@@ -343,6 +377,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                             MPI_Waitall(req_count, reqs, MPI_STATUSES_IGNORE);
                             comm_time += (MPI_Wtime() - comm_start_time);
                         }
+                        //---------------------------------
 
                         comp_start_time = MPI_Wtime();
                         // Check neither it nor its immediate neighbors have any available ports
@@ -420,7 +455,14 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
     MPI_Comm_size(world_comm, &global_size);
 
     int grid_state[nrows][ncols];  // Global status matrix
-    for (int i = 0; i < nrows; i++) for (int j = 0; j < ncols; j++) grid_state[i][j] = NUM_PORTS;
+    double last_report_time[nrows][ncols];  // Record the last congestion report time of each node
+    double PREDEFINED_PERIOD = 1.5;  // Predefined period values
+    for (int i = 0; i < nrows; i++) {
+        for (int j = 0; j < ncols; j++) {
+            grid_state[i][j] = NUM_PORTS;
+            last_report_time[i][j] = -999;
+        }
+    }
 
     FILE *log_file = fopen("log.txt", "w");
     if (!log_file) {
@@ -459,6 +501,7 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
 
                 // Update status of this congestion node
                 grid_state[report.coords[0]][report.coords[1]] = report.avail_ports;
+                last_report_time[report.coords[0]][report.coords[1]] = report.timestamp;
 
                 // Update neighbors' status of this congestion node
                 int nbr_coords[4][2] = {
@@ -468,58 +511,104 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                     {report.coords[0], report.coords[1] + 1}   // Right
                 };
 
+                bool all_nbrs_congested_recently = true;
+                int valid_nbrs = 0;
+
                 for (int i = 0; i < 4; i++) {
                     if (report.avail_neigh[i] != NO_NEIGHBOR) {
                         int r = nbr_coords[i][0];
                         int c = nbr_coords[i][1];
                         if (r >= 0 && r < nrows && c >= 0 && c < ncols) {
                             grid_state[r][c] = report.avail_neigh[i];
+                            valid_nbrs++;
+
+                            // Check if this neighbor has reported within predefined period
+                            if (report.timestamp - last_report_time[r][c] > PREDEFINED_PERIOD) {
+                                all_nbrs_congested_recently = false;
+                            }
                         }
                     }
                 }
 
-                int best_row = -1, best_col = -1;
-                int max_dist = nrows + ncols;
-                bool found = false;
-
-                for (int d = 1; d <= max_dist && !found; d++) {  // Expand layer by layer
-                    for (int dx = -d; dx <= d; dx++) {
-                        int dy = d - abs(dx);  // Manhattan Distance (Diamond Scanning)
-
-                        // Positive direction
-                        int r = report.coords[0] + dx;
-                        int c = report.coords[1] + dy;
-                        if (r >= 0 && r < nrows && c >= 0 && c < ncols) {
-                            if (grid_state[r][c] > THRESHOLD) {
+                //---------------------------------
+                // Original: Brute-Force
+                //---------------------------------
+                /*
+                int best_row = -1, best_col = -1, min_dist = 999999;
+                for (int r = 0; r < nrows; r++) {
+                    for (int c = 0; c < ncols; c++) {
+                        if (grid_state[r][c] >= THRESHOLD && (r != report.coords[0] || c != report.coords[1])) {
+                            int dist = abs(r - report.coords[0]) + abs(c - report.coords[1]);
+                            if (dist < min_dist) {
+                                min_dist = dist;
                                 best_row = r;
                                 best_col = c;
-                                found = true;
-                                break;  // Once find the available ports, immediately exit the expansion
                             }
                         }
+                    }
+                }
+                */
+                //---------------------------------
 
-                        // Negative direction
-                        if (dy != 0) {
-                            c = report.coords[1] - dy;
+                int max_candidates = 8;  // Available nodes at the same distance, assume has 8
+                int best_coords[16];
+                int found_count = 0;
+
+                if (valid_nbrs > 0 && all_nbrs_congested_recently) {  // This area is heavily congested
+                    fprintf(log_file, "T:%.2fs, No available nodes nearby\n", report.timestamp);
+                    fflush(log_file);
+                    comp_time += (MPI_Wtime() - comp_start_time);
+                } else {  // The nodes may have free ports
+                    //---------------------------------
+                    // Optimization: A BFS for available ports by expanding outward in a ripple-like manner
+                    //---------------------------------
+                    int max_dist = nrows + ncols;
+                    bool found = false;
+
+                    for (int d = 1; d <= max_dist && !found; d++) {  // Expand layer by layer
+                        for (int dx = -d; dx <= d; dx++) {
+                            int dy = d - abs(dx);  // Manhattan Distance (Diamond Scanning)
+
+                            // Positive direction
+                            int r = report.coords[0] + dx;
+                            int c = report.coords[1] + dy;
                             if (r >= 0 && r < nrows && c >= 0 && c < ncols) {
-                                if (grid_state[r][c] > THRESHOLD) {
-                                    best_row = r;
-                                    best_col = c;
+                                if (grid_state[r][c] > THRESHOLD && found_count < max_candidates) {
+                                    best_coords[found_count * 2] = r;  // Mapping 2D to 1D
+                                    best_coords[found_count * 2 + 1] = c;
+                                    found_count++;
                                     found = true;
-                                    break;  // Once find the available ports, immediately exit the expansion
+                                }
+                            }
+
+                            // Negative direction
+                            if (dy != 0) {
+                                c = report.coords[1] - dy;
+                                if (r >= 0 && r < nrows && c >= 0 && c < ncols) {
+                                    if (grid_state[r][c] > THRESHOLD && found_count < max_candidates) {
+                                        best_coords[found_count * 2] = r;
+                                        best_coords[found_count * 2 + 1] = c;
+                                        found_count++;
+                                        found = true;
+                                    }
                                 }
                             }
                         }
                     }
+                    //---------------------------------
+                    comp_time += (MPI_Wtime() - comp_start_time);
                 }
-                comp_time += (MPI_Wtime() - comp_start_time);
 
                 // Reply back to that congestion node for available ports
-                int reply_coords[2] = {best_row, best_col};
-
                 comm_start_time = MPI_Wtime();
-                MPI_Send(reply_coords, 2, MPI_INT, probe_status.MPI_SOURCE, MSG_BS_REPLY, world_comm);
+                MPI_Send(&found_count, 1, MPI_INT, probe_status.MPI_SOURCE, MSG_BS_REPLY, world_comm);
+                if (found_count > 0) {
+                    MPI_Send(best_coords, found_count * 2, MPI_INT, probe_status.MPI_SOURCE, MSG_BS_REPLY, world_comm);
+                }
                 comm_time += (MPI_Wtime() - comm_start_time);
+                
+                int best_row = (found_count > 0) ? best_coords[0] : -1;
+                int best_col = (found_count > 0) ? best_coords[1] : -1;
 
                 // Record into log
                 fprintf(
