@@ -87,7 +87,7 @@ void CreateDataType(MPI_Datatype *report_type) {
     MPI_Type_commit(report_type);
 }
 
-void PrintGridSnapshot(FILE *log_file, double timestamp, int nrows, int ncols, int grid_state[nrows][ncols], int alert_row, int alert_col, int best_row, int best_col) {
+void PrintGrid(FILE *log_file, double timestamp, int nrows, int ncols, int grid_state[nrows][ncols], int alert_row, int alert_col, int best_row, int best_col) {
     /**
      * Snapshot for the mesh topology.
      */
@@ -483,6 +483,9 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                     report.msg_exchanged,      // Total communication overhead
                     best_row, best_col
                 );
+
+                // Print the grid
+                PrintGrid(log_file, report.timestamp, nrows, ncols, grid_state, report.coords[0], report.coords[1], best_row, best_col);
                 fflush(log_file);
             }
         } else {
