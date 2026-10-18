@@ -499,9 +499,15 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                 ttl_alerts++;
                 ttl_events += report.msg_exchanged + 1;
 
+                // Get the absolute current time at the Base Station
+                // Acts as a single source of truth to eliminate distributed clock drift errors
+                double curr_time = MPI_Wtime();
+
                 // Update status of this congestion node
                 grid_state[report.coords[0]][report.coords[1]] = report.avail_ports;
-                last_report_time[report.coords[0]][report.coords[1]] = report.timestamp;
+
+                // Record the timestamp using the Base Station's absolute clock 
+                last_report_time[report.coords[0]][report.coords[1]] = curr_time;
 
                 // Update neighbors' status of this congestion node
                 int nbr_coords[4][2] = {
@@ -522,8 +528,8 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                             grid_state[r][c] = report.avail_neigh[i];
                             valid_nbrs++;
 
-                            // Check if this neighbor has reported within predefined period
-                            if (report.timestamp - last_report_time[r][c] > PREDEFINED_PERIOD) {
+                            // Check if this neighbor has never or its last congestion data has expired
+                            if (last_report_time[r][c] < 0 || curr_time - last_report_time[r][c] > PREDEFINED_PERIOD) {
                                 all_nbrs_congested_recently = false;
                             }
                         }
