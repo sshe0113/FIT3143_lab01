@@ -470,7 +470,11 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
 
                 for (int i = 0; i < 4; i++) {
                     if (report.avail_neigh[i] != NO_NEIGHBOR) {
-                        grid_state[nbr_coords[i][0]][nbr_coords[i][1]] = report.avail_neigh[i];
+                        int r = nbr_coords[i][0];
+                        int c = nbr_coords[i][1];
+                        if (r >= 0 && r < nrows && c >= 0 && c < ncols) {
+                            grid_state[r][c] = report.avail_neigh[i];
+                        }
                     }
                 }
 
