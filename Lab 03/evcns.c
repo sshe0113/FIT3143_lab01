@@ -25,7 +25,7 @@
 #define DISP 1              // Displacement
 #define NO_NEIGHBOR -2      // No physical neighbors
 #define NUM_PORTS 6         // Number of charging ports in a node
-#define THRESHOLD 2         // A node is congestion if it remains less than or equal to available ports
+#define THRESHOLD 2         // A node is congested when 2 or fewer ports are available
 
 // MPI Message Tags
 #define MSG_REQ_NEIGHBOR 1  // Request message tag from a node to its neighbors to check available ports
@@ -282,7 +282,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                     }
                     comp_time += (MPI_Wtime() - comp_start_time);
 
-                    if (loc_avail_ports < THRESHOLD) {
+                    if (loc_avail_ports <= THRESHOLD) {
                         comp_start_time = MPI_Wtime();
                         int req = 1; // Just a dummy variable to send something
                         int neighbors[4] = {nbr_i_lo, nbr_i_hi, nbr_j_lo, nbr_j_hi};
@@ -348,7 +348,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                         // Check neither it nor its immediate neighbors have any available ports
                         bool all_neigh_full = true;
                         for (int i = 0; i < 4; i++) {
-                            if (neigh_ports[i] >= THRESHOLD) all_neigh_full = false;
+                            if (neigh_ports[i] > THRESHOLD) all_neigh_full = false;
                         }
 
                         if (all_neigh_full) {
@@ -490,7 +490,7 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                         int r = report.coords[0] + dx;
                         int c = report.coords[1] + dy;
                         if (r >= 0 && r < nrows && c >= 0 && c < ncols) {
-                            if (grid_state[r][c] >= THRESHOLD) {
+                            if (grid_state[r][c] > THRESHOLD) {
                                 best_row = r;
                                 best_col = c;
                                 found = true;
@@ -502,7 +502,7 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                         if (dy != 0) {
                             c = report.coords[1] - dy;
                             if (r >= 0 && r < nrows && c >= 0 && c < ncols) {
-                                if (grid_state[r][c] >= THRESHOLD) {
+                                if (grid_state[r][c] > THRESHOLD) {
                                     best_row = r;
                                     best_col = c;
                                     found = true;
@@ -523,7 +523,7 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
 
                 // Record into log
                 fprintf(
-                    log_file, "T:%.2fs | ALERT [%d] | Rank: %d Coord: (%d,%d) | Ports Free: %d | Neighbor Free: [T:%d, B:%d, L:%d, R:%d] | Msgs: %d | Nearest: (%d,%d)\n",
+                    log_file, "T:%.2fs | ALERT [%d] | Rank: %d Coord: (%d,%d) | Ports Free: %d | Neighbor Free: [T:%d, B:%d, L:%d, R:%d] | Msgs: %d | Msg Size: %d Bytes | Nearest: (%d,%d)\n",
                     report.timestamp,          // Congestion happen time
                     ttl_alerts,                // Number for this congestion
                     report.sender_rank, 
@@ -535,6 +535,7 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                     report.avail_neigh[2], 
                     report.avail_neigh[3], 
                     report.msg_exchanged,      // Total communication overhead
+                    report.msg_size,
                     best_row, best_col
                 );
 
