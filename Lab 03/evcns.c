@@ -42,7 +42,7 @@ typedef struct {
     int avail_ports;    // Number of free ports at this node
     int avail_neigh[4]; // Free ports of neighbors
     int msg_exchanged;  // Total messages sent/received to check neighbors
-    int msg_size;       // Size of a single neighbor request payload (bytes)
+    int msg_size;       // Total data volume of messages exchanged (bytes)
 } MsgData;
 
 void CreateDataType(MPI_Datatype *report_type) {
@@ -359,7 +359,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                                 .avail_ports = loc_avail_ports, // Proof that this node is full
                                 .avail_neigh = {neigh_ports[0], neigh_ports[1], neigh_ports[2], neigh_ports[3]}, // Proof that the neighbors are also full
                                 .msg_exchanged = req_count * 2,  // Tracking how much message was generated
-                                .msg_size = sizeof(int)
+                                .msg_size = (req_count * 2) * sizeof(int)
                             };
                             comp_time += (MPI_Wtime() - comp_start_time);
 
