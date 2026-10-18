@@ -17,6 +17,7 @@
 #include <omp.h>
 #include <math.h>
 #include <stddef.h>
+#include <unistd.h>
 
 // Constants
 #define SHIFT_R0W 0         // Row dimension in a 2D grid
@@ -122,12 +123,14 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
             while (running) {
                 // Every two seconds perform once (random change a port status)
                 if (MPI_Wtime() - last_update > 2.0) {
-                    #pragma omp critical 
-                    {  // Mutex lock
-                        ports[thread_id] = rand() % 2;
+                    #pragma omp critical  // Mutex lock
+                    {  
+                        ports[thread_id] = (rand() % 100 < 80) ? 0 : 1;  // 80% of ports are utilized, 20% stalls
                     }
                     last_update = MPI_Wtime();
                 }
+                usleep(1000);
+
                 #pragma omp atomic read
                 running = running_flag;
             }
@@ -153,6 +156,36 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
 
                     #pragma omp atomic write
                     running_flag = false;
+
+                    // Once terminate, get into 1.5 seconds Disable mode
+                    double drain_start = MPI_Wtime();
+                    while (MPI_Wtime() - drain_start < 3.5) {
+                        usleep(1000);
+                        int req_flag;
+                        MPI_Status drain_status;
+
+                        comm_start_time = MPI_Wtime();
+                        MPI_Iprobe(MPI_ANY_SOURCE, MSG_REQ_NEIGHBOR, comm2D, &req_flag, &drain_status);
+                        comm_time += (MPI_Wtime() - comm_start_time);
+
+                        if (req_flag) {
+                            int dummy;
+
+                            comm_start_time = MPI_Wtime();
+                            MPI_Recv(&dummy, 1, MPI_INT, drain_status.MPI_SOURCE, MSG_REQ_NEIGHBOR, comm2D, MPI_STATUS_IGNORE);
+                            comm_time += (MPI_Wtime() - comm_start_time);
+
+                            int curr_avail = 0;
+                            #pragma omp critical 
+                            {
+                                for (int p = 0; p < NUM_PORTS; p++) curr_avail += ports[p];
+                            }
+
+                            comm_start_time = MPI_Wtime();
+                            MPI_Send(&curr_avail, 1, MPI_INT, drain_status.MPI_SOURCE, MSG_RES_NEIGHBOR, comm2D);
+                            comm_time += (MPI_Wtime() - comm_start_time);
+                        }
+                    }
                     break;
                 }
 
@@ -401,6 +434,8 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                 );
                 fflush(log_file);
             }
+        } else {
+            usleep(100);
         }
 
         // Gracefully shutdown the whole system after 30 seconds
