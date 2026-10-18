@@ -87,9 +87,9 @@ void CreateDataType(MPI_Datatype *report_type) {
     MPI_Type_commit(report_type);
 }
 
-//-------------------------------------------
+//===========================================
 // EV Charging Node
-//-------------------------------------------
+//===========================================
 void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datatype report_type) {
     int global_size, global_rank;
     MPI_Comm_size(world_comm, &global_size);
@@ -157,7 +157,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                     #pragma omp atomic write
                     running_flag = false;
 
-                    // Once terminate, get into 1.5 seconds Disable mode
+                    // Once terminate, get into 3.5 seconds Disable mode
                     double drain_start = MPI_Wtime();
                     while (MPI_Wtime() - drain_start < 3.5) {
                         usleep(1000);
@@ -238,7 +238,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                         int req_count = 0;
 
                         //---------------------------------
-                        // Using MPI_Send & MPI_Recv
+                        // Original: Using MPI_Send & MPI_Recv
                         //---------------------------------
                         /*
                         for (int i = 0; i < 4; i++) {
@@ -252,7 +252,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                         //---------------------------------
                         
                         //---------------------------------
-                        // Using MPI_Isend & MPI_Irecv
+                        // Optimization: Using MPI_Isend & MPI_Irecv
                         //---------------------------------
                         MPI_Request reqs[4], recv[4];
                         comm_start_time = MPI_Wtime();
@@ -295,6 +295,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                     }
                     last_check = MPI_Wtime();
                 }
+                usleep(1000);
 
                 #pragma omp atomic read
                 running = running_flag;
@@ -329,9 +330,9 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
     MPI_Comm_free(&comm2D);
 }
 
-//-------------------------------------------
+//===========================================
 // Base Station
-//-------------------------------------------
+//===========================================
 void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datatype report_type) {
     int global_size;
     MPI_Comm_size(world_comm, &global_size);
@@ -353,7 +354,7 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
     MsgData report;
     double comm_time = 0.0, comm_start_time;
 
-    printf("[Base Station] listening for reports...\n");
+    printf("[Base Station] Listening for reports...\n");
     fflush(stdout);
     fprintf(log_file, "----- SIMULATION STARTED -----\n");
     fflush(log_file);
@@ -373,7 +374,29 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                 ttl_events += report.msg_exchanged + 1;
                 grid_state[report.coords[0]][report.coords[1]] = report.avail_ports;  // Update status
 
-                // A BFS for available ports by expanding outward in a ripple-like manner
+                //---------------------------------
+                // Original: Brute-Force
+                //---------------------------------
+                /*
+                int best_row = -1, best_col = -1, min_dist = 999999;
+                for (int r = 0; r < nrows; r++) {
+                    for (int c = 0; c < ncols; c++) {
+                        if (grid_state[r][c] >= THRESHOLD && (r != report.coords[0] || c != report.coords[1])) {
+                            int dist = abs(r - report.coords[0]) + abs(c - report.coords[1]);
+                            if (dist < min_dist) {
+                                min_dist = dist;
+                                best_row = r;
+                                best_col = c;
+                            }
+                        }
+                    }
+                }
+                */
+                //---------------------------------
+
+                //---------------------------------
+                // Optimization: A BFS for available ports by expanding outward in a ripple-like manner
+                //---------------------------------
                 int best_row = -1, best_col = -1;
                 int max_dist = nrows + ncols;
                 bool found = false;
@@ -408,6 +431,7 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                         }
                     }
                 }
+                //---------------------------------
 
                 // Reply back to that congestion node for available ports
                 int reply_coords[2] = {best_row, best_col};
@@ -450,6 +474,32 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
             }
             comm_time += (MPI_Wtime() - comm_start_time);
 
+            // Once terminate, get into 4.0 seconds Disable mode
+            double drain_start = MPI_Wtime();
+            while (MPI_Wtime() - drain_start < 4.0) {
+                int drain_flag;
+                MPI_Status drain_status;
+
+                comm_start_time = MPI_Wtime();
+                MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, world_comm, &drain_flag, &drain_status);
+                comm_time += (MPI_Wtime() - comm_start_time);
+                
+                if (drain_flag) {
+                    if (drain_status.MPI_TAG == MSG_REPORT) {
+                        MsgData dummy_report;
+                        comm_start_time = MPI_Wtime();
+                        MPI_Recv(&dummy_report, 1, report_type, drain_status.MPI_SOURCE, MSG_REPORT, world_comm, MPI_STATUS_IGNORE);
+                        comm_time += (MPI_Wtime() - comm_start_time);
+                    } else {
+                        int dummy;
+                        comm_start_time = MPI_Wtime();
+                        MPI_Recv(&dummy, 1, MPI_INT, drain_status.MPI_SOURCE, drain_status.MPI_TAG, world_comm, MPI_STATUS_IGNORE);
+                        comm_time += (MPI_Wtime() - comm_start_time);
+                    }
+                } else {
+                    usleep(1000);
+                }
+            }
             break;
         }
     }
