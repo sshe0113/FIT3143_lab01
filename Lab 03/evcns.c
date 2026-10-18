@@ -130,10 +130,13 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
     for (int i = 0; i < NUM_PORTS; i++) ports[i] = 1;
     bool running_flag = true;  // true means simulation is running, false otherwise
     double start_time = MPI_Wtime();  // Record time
+    double node_comp_time = 0.0;
+    double node_comm_time = 0.0;
 
-    #pragma omp parallel num_threads(NUM_PORTS + 1) shared(ports, running_flag, start_time) 
+    #pragma omp parallel num_threads(NUM_PORTS + 1) shared(ports, running_flag, start_time, node_comp_time, node_comm_time) 
     {
         int thread_id = omp_get_thread_num();
+        double comp_time = 0.0, comp_start_time;
 
         if (thread_id < NUM_PORTS) {
             double last_update = MPI_Wtime();  // Record the last updated time of a port
@@ -144,10 +147,12 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
             while (running) {
                 // Every two seconds perform once (random change a port status)
                 if (MPI_Wtime() - last_update > 2.0) {
+                    comp_start_time = MPI_Wtime();
                     #pragma omp critical  // Mutex lock
                     {  
                         ports[thread_id] = (rand() % 100 < 80) ? 0 : 1;  // 80% of ports are utilized, 20% stalls
                     }
+                    comp_time += (MPI_Wtime() - comp_start_time);
                     last_update = MPI_Wtime();
                 }
                 usleep(1000);
@@ -196,11 +201,13 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                             MPI_Recv(&dummy, 1, MPI_INT, drain_status.MPI_SOURCE, MSG_REQ_NEIGHBOR, comm2D, MPI_STATUS_IGNORE);
                             comm_time += (MPI_Wtime() - comm_start_time);
 
+                            comp_start_time = MPI_Wtime();
                             int curr_avail = 0;
                             #pragma omp critical 
                             {
                                 for (int p = 0; p < NUM_PORTS; p++) curr_avail += ports[p];
                             }
+                            comp_time += (MPI_Wtime() - comp_start_time);
 
                             comm_start_time = MPI_Wtime();
                             MPI_Send(&curr_avail, 1, MPI_INT, drain_status.MPI_SOURCE, MSG_RES_NEIGHBOR, comm2D);
@@ -233,11 +240,13 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                     MPI_Recv(&req_sig, 1, MPI_INT, probe_status.MPI_SOURCE, MSG_REQ_NEIGHBOR, comm2D, MPI_STATUS_IGNORE);
                     comm_time += (MPI_Wtime() - comm_start_time);
 
+                    comp_start_time = MPI_Wtime();
                     int curr_avail = 0;  // Get how many available ports
                     #pragma omp critical 
                     {
                         for (int i = 0; i < NUM_PORTS; i++) curr_avail += ports[i];
                     }
+                    comp_time += (MPI_Wtime() - comp_start_time);
 
                     comm_start_time = MPI_Wtime();
                     MPI_Send(&curr_avail, 1, MPI_INT, probe_status.MPI_SOURCE, MSG_RES_NEIGHBOR, comm2D);
@@ -258,17 +267,21 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
 
                 // Local congestion checking and neighbors communication
                 if (MPI_Wtime() - last_check > 3.0) {
+                    comp_start_time = MPI_Wtime();
                     int loc_avail_ports = 0;
                     #pragma omp critical 
                     {
                         for (int i = 0; i < NUM_PORTS; i++) loc_avail_ports += ports[i];
                     }
+                    comp_time += (MPI_Wtime() - comp_start_time);
 
                     if (loc_avail_ports < THRESHOLD) {
+                        comp_start_time = MPI_Wtime();
                         int req = 1; // Just a dummy variable to send something
                         int neighbors[4] = {nbr_i_lo, nbr_i_hi, nbr_j_lo, nbr_j_hi};
                         int neigh_ports[4] = {NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR};
                         int req_count = 0;
+                        comp_time += (MPI_Wtime() - comp_start_time);
                         
                         MPI_Request reqs[4], recv[4];
                         comm_start_time = MPI_Wtime();
@@ -303,11 +316,13 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                                         MPI_Recv(&inc_sig, 1, MPI_INT, inc_status.MPI_SOURCE, MSG_REQ_NEIGHBOR, comm2D, MPI_STATUS_IGNORE);
                                         comm_time += (MPI_Wtime() - comm_start_time);
 
+                                        comp_start_time = MPI_Wtime();
                                         int curr_avail = 0;
                                         #pragma omp critical 
                                         {
                                             for (int p = 0; p < NUM_PORTS; p++) curr_avail += ports[p];
                                         }
+                                        comp_time += (MPI_Wtime() - comp_start_time);
 
                                         comm_start_time = MPI_Wtime();
                                         MPI_Send(&curr_avail, 1, MPI_INT, inc_status.MPI_SOURCE, MSG_RES_NEIGHBOR, comm2D);
@@ -322,6 +337,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                             comm_time += (MPI_Wtime() - comm_start_time);
                         }
 
+                        comp_start_time = MPI_Wtime();
                         // Check neither it nor its immediate neighbors have any available ports
                         bool all_neigh_full = true;
                         for (int i = 0; i < 4; i++) {
@@ -338,10 +354,13 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                                 .msg_exchanged = req_count * 2,  // Tracking how much message was generated
                                 .msg_size = sizeof(int)
                             };
+                            comp_time += (MPI_Wtime() - comp_start_time);
 
                             comm_start_time = MPI_Wtime();
                             MPI_Send(&msg, 1, report_type, global_size - 1, MSG_REPORT, world_comm);
                             comm_time += (MPI_Wtime() - comm_start_time);
+                        } else {
+                            comp_time += (MPI_Wtime() - comp_start_time);
                         }
                     }
                     last_check = MPI_Wtime();
@@ -351,32 +370,37 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                 #pragma omp atomic read
                 running = running_flag;
             }
-
-            // EV Charging Node internal overall time, computational time, communication time
-            double overall_time = MPI_Wtime() - start_time;
-            double comp_time = overall_time - comm_time;
-            
-            // Gather all times to rank 0 of the charging nodes
-            int comm2D_rank, slave_size;
-            MPI_Comm_rank(comm2D, &comm2D_rank);
-            MPI_Comm_size(comm2D, &slave_size);
-
-            double sum_overall = 0.0, sum_comm = 0.0, sum_comp = 0.0;
-            MPI_Reduce(&overall_time, &sum_overall, 1, MPI_DOUBLE, MPI_SUM, 0, comm2D);
-            MPI_Reduce(&comm_time, &sum_comm, 1, MPI_DOUBLE, MPI_SUM, 0, comm2D);
-            MPI_Reduce(&comp_time, &sum_comp, 1, MPI_DOUBLE, MPI_SUM, 0, comm2D);
-
-            if (comm2D_rank == 0) {
-                double avg_overall = sum_overall / slave_size;
-                double avg_comm = sum_comm / slave_size;
-                double avg_comp = sum_comp / slave_size;
-                printf(
-                    "[Charging Nodes Average] Overall: %.4fs | Comm: %.4fs | Comp: %.4fs\n",
-                    avg_overall, avg_comm, avg_comp
-                );
-                fflush(stdout);
-            }
+            node_comm_time = comm_time;
         }
+
+        #pragma omp atomic
+        node_comp_time += comp_time;
+    }
+
+    // EV Charging Node internal overall time, computational time, communication time
+    double overall_time = MPI_Wtime() - start_time;
+    double comp_time = node_comp_time;
+    double comm_time = node_comm_time;
+    
+    // Gather all times to rank 0 of the charging nodes
+    int comm2D_rank, slave_size;
+    MPI_Comm_rank(comm2D, &comm2D_rank);
+    MPI_Comm_size(comm2D, &slave_size);
+
+    double sum_overall = 0.0, sum_comm = 0.0, sum_comp = 0.0;
+    MPI_Reduce(&overall_time, &sum_overall, 1, MPI_DOUBLE, MPI_SUM, 0, comm2D);
+    MPI_Reduce(&comm_time, &sum_comm, 1, MPI_DOUBLE, MPI_SUM, 0, comm2D);
+    MPI_Reduce(&comp_time, &sum_comp, 1, MPI_DOUBLE, MPI_SUM, 0, comm2D);
+
+    if (comm2D_rank == 0) {
+        double avg_overall = sum_overall / slave_size;
+        double avg_comm = sum_comm / slave_size;
+        double avg_comp = sum_comp / slave_size;
+        printf(
+            "[Charging Nodes Average] Overall: %.4fs | Comm: %.4fs | Comp: %.4fs\n",
+            avg_overall, avg_comm, avg_comp
+        );
+        fflush(stdout);
     }
     MPI_Comm_free(&comm2D);
 }
@@ -404,6 +428,7 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
     MPI_Status probe_status;  // Keep track who are the sender and what tag of msg sender send
     MsgData report;
     double comm_time = 0.0, comm_start_time;
+    double comp_time = 0.0, comp_start_time;
 
     printf("[Base Station] Listening for reports...\n");
     fflush(stdout);
@@ -421,6 +446,7 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                 MPI_Recv(&report, 1, report_type, probe_status.MPI_SOURCE, MSG_REPORT, world_comm, MPI_STATUS_IGNORE);
                 comm_time += (MPI_Wtime() - comm_start_time);
 
+                comp_start_time = MPI_Wtime();
                 ttl_alerts++;
                 ttl_events += report.msg_exchanged + 1;
                 grid_state[report.coords[0]][report.coords[1]] = report.avail_ports;  // Update status
@@ -459,6 +485,7 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                         }
                     }
                 }
+                comp_time += (MPI_Wtime() - comp_start_time);
 
                 // Reply back to that congestion node for available ports
                 int reply_coords[2] = {best_row, best_col};
@@ -536,7 +563,6 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
 
     // Base Station overall time, computational time, communication time
     double overall_time = MPI_Wtime() - start_time;
-    double comp_time = overall_time - comm_time;
 
     fprintf(log_file, "----- SIMULATION SUMMARY -----\n");
     fprintf(log_file, "Total Simulation Time: %.4f seconds\n", overall_time);
