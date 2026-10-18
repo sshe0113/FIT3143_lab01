@@ -95,13 +95,17 @@ void PrintGrid(FILE *log_file, double timestamp, int nrows, int ncols, int grid_
     fprintf(log_file, "----- Grid Snapshot at %.2fs -----\n", timestamp);
     for (int r = 0; r < nrows; r++) {
         for (int c = 0; c < ncols; c++) {
+            char cell_buffer[32];
+
             if (r == alert_row && c == alert_col) {
-                fprintf(log_file, "(%d,%d)[!!]:%d\t", r, c, grid_state[r][c]);
+                sprintf(cell_buffer, "(%d,%d)[!!]:%d", r, c, grid_state[r][c]);
             } else if (r == best_row && c == best_col) {
-                fprintf(log_file, "(%d,%d)[OK]:%d\t", r, c, grid_state[r][c]);
+                sprintf(cell_buffer, "(%d,%d)[OK]:%d", r, c, grid_state[r][c]);
             } else {
-                fprintf(log_file, "(%d,%d):%d\t", r, c, grid_state[r][c]);
+                sprintf(cell_buffer, "(%d,%d):%d", r, c, grid_state[r][c]);
             }
+
+            fprintf(log_file, "%-16s", cell_buffer);
         }
         fprintf(log_file, "\n");
     }
