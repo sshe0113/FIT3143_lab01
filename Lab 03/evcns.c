@@ -122,7 +122,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
 
     srand(time(NULL) + global_rank);
     int dims[2] = {nrows, ncols}, coord[2], wrapAround[2] = {0, 0};  // 2D Mesh
-    int nbr_i_lo, nbr_i_hi, nbr_j_lo, nbr_j_hi;  // Bottom, Top, Left, Right
+    int nbr_i_lo, nbr_i_hi, nbr_j_lo, nbr_j_hi;  // Top, Bottom, Left, Right
     MPI_Comm comm2D;
 
     MPI_Cart_create(comm, 2, dims, wrapAround, 0, &comm2D);
