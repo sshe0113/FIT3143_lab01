@@ -1,0 +1,199 @@
+----- SIMULATION STARTED -----
+T:3.01s | ALERT [1] | Rank: 0 Coord: (0,0) | Ports Free: 2 | Neighbor Free: [T:-2, B:1, L:-2, R:0] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (0,2)
+----- Grid Snapshot at 3.01s -----
+(0,0)[!!]:2     (0,1):0         (0,2)[OK]:6     
+(1,0):1         (1,1):6         (1,2):6         
+(2,0):6         (2,1):6         (2,2):6         
+--------------------------------
+
+T:3.01s | ALERT [2] | Rank: 1 Coord: (0,1) | Ports Free: 0 | Neighbor Free: [T:-2, B:2, L:2, R:2] | Msgs: 6 | Msg Size: 24 Bytes | Nearest: (1,2)
+----- Grid Snapshot at 3.01s -----
+(0,0):2         (0,1)[!!]:0     (0,2):2         
+(1,0):1         (1,1):2         (1,2)[OK]:6     
+(2,0):6         (2,1):6         (2,2):6         
+--------------------------------
+
+T:3.01s | ALERT [3] | Rank: 2 Coord: (0,2) | Ports Free: 2 | Neighbor Free: [T:-2, B:1, L:0, R:-2] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (2,2)
+----- Grid Snapshot at 3.01s -----
+(0,0):2         (0,1):0         (0,2)[!!]:2     
+(1,0):1         (1,1):2         (1,2):1         
+(2,0):6         (2,1):6         (2,2)[OK]:6     
+--------------------------------
+
+T:3.01s | ALERT [4] | Rank: 3 Coord: (1,0) | Ports Free: 1 | Neighbor Free: [T:2, B:1, L:-2, R:2] | Msgs: 6 | Msg Size: 24 Bytes | Nearest: (2,1)
+----- Grid Snapshot at 3.01s -----
+(0,0):2         (0,1):0         (0,2):2         
+(1,0)[!!]:1     (1,1):2         (1,2):1         
+(2,0):1         (2,1)[OK]:6     (2,2):6         
+--------------------------------
+
+T:3.02s | ALERT [5] | Rank: 4 Coord: (1,1) | Ports Free: 2 | Neighbor Free: [T:0, B:1, L:1, R:1] | Msgs: 8 | Msg Size: 32 Bytes | Nearest: (2,2)
+----- Grid Snapshot at 3.02s -----
+(0,0):2         (0,1):0         (0,2):2         
+(1,0):1         (1,1)[!!]:2     (1,2):1         
+(2,0):1         (2,1):1         (2,2)[OK]:6     
+--------------------------------
+
+T:3.02s | ALERT [6] | Rank: 5 Coord: (1,2) | Ports Free: 1 | Neighbor Free: [T:2, B:1, L:2, R:-2] | Msgs: 6 | Msg Size: 24 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 3.02s -----
+(0,0):2         (0,1):0         (0,2):2         
+(1,0):1         (1,1):2         (1,2)[!!]:1     
+(2,0):1         (2,1):1         (2,2):1         
+--------------------------------
+
+T:3.02s | ALERT [7] | Rank: 6 Coord: (2,0) | Ports Free: 1 | Neighbor Free: [T:1, B:-2, L:-2, R:1] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 3.02s -----
+(0,0):2         (0,1):0         (0,2):2         
+(1,0):1         (1,1):2         (1,2):1         
+(2,0)[!!]:1     (2,1):1         (2,2):1         
+--------------------------------
+
+T:3.03s | ALERT [8] | Rank: 7 Coord: (2,1) | Ports Free: 1 | Neighbor Free: [T:2, B:-2, L:1, R:1] | Msgs: 6 | Msg Size: 24 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 3.03s -----
+(0,0):2         (0,1):0         (0,2):2         
+(1,0):1         (1,1):2         (1,2):1         
+(2,0):1         (2,1)[!!]:1     (2,2):1         
+--------------------------------
+
+T:3.03s, No available nodes nearby
+T:3.03s | ALERT [9] | Rank: 8 Coord: (2,2) | Ports Free: 1 | Neighbor Free: [T:1, B:-2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 3.03s -----
+(0,0):2         (0,1):0         (0,2):2         
+(1,0):1         (1,1):2         (1,2):1         
+(2,0):1         (2,1):1         (2,2)[!!]:1     
+--------------------------------
+
+T:6.04s | ALERT [10] | Rank: 5 Coord: (1,2) | Ports Free: 2 | Neighbor Free: [T:2, B:1, L:2, R:-2] | Msgs: 6 | Msg Size: 24 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 6.04s -----
+(0,0):2         (0,1):0         (0,2):2         
+(1,0):1         (1,1):2         (1,2)[!!]:2     
+(2,0):1         (2,1):1         (2,2):1         
+--------------------------------
+
+T:6.05s | ALERT [11] | Rank: 7 Coord: (2,1) | Ports Free: 1 | Neighbor Free: [T:2, B:-2, L:1, R:1] | Msgs: 6 | Msg Size: 24 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 6.05s -----
+(0,0):2         (0,1):0         (0,2):2         
+(1,0):1         (1,1):2         (1,2):2         
+(2,0):1         (2,1)[!!]:1     (2,2):1         
+--------------------------------
+
+T:6.05s, No available nodes nearby
+T:6.05s | ALERT [12] | Rank: 8 Coord: (2,2) | Ports Free: 1 | Neighbor Free: [T:2, B:-2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 6.05s -----
+(0,0):2         (0,1):0         (0,2):2         
+(1,0):1         (1,1):2         (1,2):2         
+(2,0):1         (2,1):1         (2,2)[!!]:1     
+--------------------------------
+
+T:9.06s | ALERT [13] | Rank: 2 Coord: (0,2) | Ports Free: 2 | Neighbor Free: [T:-2, B:2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 9.06s -----
+(0,0):2         (0,1):1         (0,2)[!!]:2     
+(1,0):1         (1,1):2         (1,2):2         
+(2,0):1         (2,1):1         (2,2):1         
+--------------------------------
+
+T:9.06s | ALERT [14] | Rank: 4 Coord: (1,1) | Ports Free: 0 | Neighbor Free: [T:1, B:1, L:2, R:2] | Msgs: 8 | Msg Size: 32 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 9.06s -----
+(0,0):2         (0,1):1         (0,2):2         
+(1,0):2         (1,1)[!!]:0     (1,2):2         
+(2,0):1         (2,1):1         (2,2):1         
+--------------------------------
+
+T:9.06s | ALERT [15] | Rank: 5 Coord: (1,2) | Ports Free: 2 | Neighbor Free: [T:2, B:2, L:0, R:-2] | Msgs: 6 | Msg Size: 24 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 9.06s -----
+(0,0):2         (0,1):1         (0,2):2         
+(1,0):2         (1,1):0         (1,2)[!!]:2     
+(2,0):1         (2,1):1         (2,2):2         
+--------------------------------
+
+T:9.07s | ALERT [16] | Rank: 6 Coord: (2,0) | Ports Free: 2 | Neighbor Free: [T:2, B:-2, L:-2, R:1] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 9.07s -----
+(0,0):2         (0,1):1         (0,2):2         
+(1,0):2         (1,1):0         (1,2):2         
+(2,0)[!!]:2     (2,1):1         (2,2):2         
+--------------------------------
+
+T:9.07s | ALERT [17] | Rank: 7 Coord: (2,1) | Ports Free: 1 | Neighbor Free: [T:0, B:-2, L:2, R:2] | Msgs: 6 | Msg Size: 24 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 9.07s -----
+(0,0):2         (0,1):1         (0,2):2         
+(1,0):2         (1,1):0         (1,2):2         
+(2,0):2         (2,1)[!!]:1     (2,2):2         
+--------------------------------
+
+T:9.07s, No available nodes nearby
+T:9.07s | ALERT [18] | Rank: 8 Coord: (2,2) | Ports Free: 2 | Neighbor Free: [T:2, B:-2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 9.07s -----
+(0,0):2         (0,1):1         (0,2):2         
+(1,0):2         (1,1):0         (1,2):2         
+(2,0):2         (2,1):1         (2,2)[!!]:2     
+--------------------------------
+
+T:12.09s | ALERT [19] | Rank: 8 Coord: (2,2) | Ports Free: 2 | Neighbor Free: [T:0, B:-2, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 12.09s -----
+(0,0):2         (0,1):1         (0,2):2         
+(1,0):2         (1,1):0         (1,2):0         
+(2,0):2         (2,1):2         (2,2)[!!]:2     
+--------------------------------
+
+T:15.10s | ALERT [20] | Rank: 8 Coord: (2,2) | Ports Free: 1 | Neighbor Free: [T:1, B:-2, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 15.10s -----
+(0,0):2         (0,1):1         (0,2):2         
+(1,0):2         (1,1):0         (1,2):1         
+(2,0):2         (2,1):2         (2,2)[!!]:1     
+--------------------------------
+
+T:18.11s | ALERT [21] | Rank: 2 Coord: (0,2) | Ports Free: 2 | Neighbor Free: [T:-2, B:0, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 18.11s -----
+(0,0):2         (0,1):2         (0,2)[!!]:2     
+(1,0):2         (1,1):0         (1,2):0         
+(2,0):2         (2,1):2         (2,2):1         
+--------------------------------
+
+T:21.14s | ALERT [22] | Rank: 4 Coord: (1,1) | Ports Free: 2 | Neighbor Free: [T:2, B:1, L:2, R:2] | Msgs: 8 | Msg Size: 32 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 21.14s -----
+(0,0):2         (0,1):2         (0,2):2         
+(1,0):2         (1,1)[!!]:2     (1,2):2         
+(2,0):2         (2,1):1         (2,2):1         
+--------------------------------
+
+T:21.14s | ALERT [23] | Rank: 8 Coord: (2,2) | Ports Free: 1 | Neighbor Free: [T:2, B:-2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 21.14s -----
+(0,0):2         (0,1):2         (0,2):2         
+(1,0):2         (1,1):2         (1,2):2         
+(2,0):2         (2,1):1         (2,2)[!!]:1     
+--------------------------------
+
+T:24.15s | ALERT [24] | Rank: 0 Coord: (0,0) | Ports Free: 2 | Neighbor Free: [T:-2, B:2, L:-2, R:2] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 24.15s -----
+(0,0)[!!]:2     (0,1):2         (0,2):2         
+(1,0):2         (1,1):2         (1,2):2         
+(2,0):2         (2,1):1         (2,2):1         
+--------------------------------
+
+T:24.16s | ALERT [25] | Rank: 8 Coord: (2,2) | Ports Free: 1 | Neighbor Free: [T:1, B:-2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 24.16s -----
+(0,0):2         (0,1):2         (0,2):2         
+(1,0):2         (1,1):2         (1,2):1         
+(2,0):2         (2,1):1         (2,2)[!!]:1     
+--------------------------------
+
+T:27.17s | ALERT [26] | Rank: 2 Coord: (0,2) | Ports Free: 2 | Neighbor Free: [T:-2, B:2, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 27.17s -----
+(0,0):2         (0,1):2         (0,2)[!!]:2     
+(1,0):2         (1,1):2         (1,2):2         
+(2,0):2         (2,1):1         (2,2):1         
+--------------------------------
+
+T:27.18s | ALERT [27] | Rank: 8 Coord: (2,2) | Ports Free: 1 | Neighbor Free: [T:2, B:-2, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes | Nearest: (-1,-1)
+----- Grid Snapshot at 27.18s -----
+(0,0):2         (0,1):2         (0,2):2         
+(1,0):2         (1,1):2         (1,2):2         
+(2,0):2         (2,1):2         (2,2)[!!]:1     
+--------------------------------
+
+----- SIMULATION SUMMARY -----
+Total Simulation Time: 34.0005 seconds
+Total Comm Time: 0.0907 seconds
+Total Comp Time: 0.0000 seconds
+Total Congestion Alerts: 27
+Total Communication Events: 163
