@@ -121,11 +121,11 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
     MPI_Comm_rank(world_comm, &global_rank);
 
     srand(time(NULL) + global_rank);
-    int dims[2] = {nrows, ncols}, coord[2], wrapAround[2] = {0, 0};  // 2D Mesh
+    int dims[2] = {nrows, ncols}, coord[2], wrap_around[2] = {0, 0};  // 2D Mesh
     int nbr_i_lo, nbr_i_hi, nbr_j_lo, nbr_j_hi;  // Top, Bottom, Left, Right
     MPI_Comm comm2D;
 
-    MPI_Cart_create(comm, 2, dims, wrapAround, 0, &comm2D);
+    MPI_Cart_create(comm, 2, dims, wrap_around, 0, &comm2D);
     MPI_Cart_coords(comm2D, global_rank, 2, coord);
     MPI_Cart_shift(comm2D, SHIFT_R0W, DISP, &nbr_i_lo, &nbr_i_hi);
     MPI_Cart_shift(comm2D, SHIFT_COL, DISP, &nbr_j_lo, &nbr_j_hi);
@@ -154,7 +154,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                     comp_start_time = MPI_Wtime();
                     #pragma omp critical  // Mutex lock
                     {  
-                        ports[thread_id] = (rand() % 100 < 70) ? 0 : 1;  // 70% of ports are utilized, 20% stalls
+                        ports[thread_id] = (rand() % 100 < 70) ? 0 : 1;  // 70% of ports are utilized, 20% is free
                     }
                     comp_time += (MPI_Wtime() - comp_start_time);
                     last_update = MPI_Wtime();
