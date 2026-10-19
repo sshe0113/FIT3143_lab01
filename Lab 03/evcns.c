@@ -18,6 +18,7 @@
 #include <math.h>
 #include <stddef.h>
 #include <unistd.h>
+#include <string.h>
 
 // Constants
 #define SHIFT_R0W 0         // Row dimension in a 2D grid
@@ -700,9 +701,544 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
     fflush(stdout);
 }
 
+/* ==============================================================================
+ * [Version 3] Fully Asynchronous Event-Driven Architecture
+ * 
+ * V3: concurrent, event-driven nonblocking point-to-point communication.
+ * Each buffer lives until its request completes. One outstanding enquiry and
+ * one outstanding base report per station bound the amount of in-flight work.
+ * ============================================================================== */
+#define MSG_DISABLE 6
+#define MSG_READY 7
+#define MSG_TERMINATED 8
+
+typedef struct {
+    MsgData report;
+    int count, coords[16], ready_value, ack_value;
+    bool ready_seen, ack_seen;
+    MPI_Request report_recv, count_send, coords_send, ready_recv, ack_recv;
+    MPI_Request disable_send, terminate_send;
+} Peer;
+
+static bool complete(MPI_Request *request) {
+    if (*request == MPI_REQUEST_NULL) return true;
+    int done;
+    MPI_Test(request, &done, MPI_STATUS_IGNORE);
+    return done != 0;
+}
+
+static void cancel_receive(MPI_Request *request) {
+    if (*request == MPI_REQUEST_NULL) return;
+    MPI_Cancel(request);
+    MPI_Wait(request, MPI_STATUS_IGNORE);
+}
+
+void SlaveIO_V3(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datatype report_type) {
+    int global_size, global_rank;
+    MPI_Comm_size(world_comm, &global_size);
+    MPI_Comm_rank(world_comm, &global_rank);
+
+    int dims[2] = {nrows, ncols}, coord[2], wrap_around[2] = {0, 0};
+    int nbr_i_lo, nbr_i_hi, nbr_j_lo, nbr_j_hi;
+    MPI_Comm comm2D;
+
+    MPI_Cart_create(comm, 2, dims, wrap_around, 0, &comm2D);
+    MPI_Cart_coords(comm2D, global_rank, 2, coord);
+    MPI_Cart_shift(comm2D, SHIFT_R0W, DISP, &nbr_i_lo, &nbr_i_hi);
+    MPI_Cart_shift(comm2D, SHIFT_COL, DISP, &nbr_j_lo, &nbr_j_hi);
+
+    int ports[NUM_PORTS];
+    for (int i = 0; i < NUM_PORTS; i++) ports[i] = 1;
+    bool running_flag = true;
+    
+    double start_time = MPI_Wtime();
+    double node_comp_time = 0.0;
+    double node_comm_time = 0.0;
+
+    #pragma omp parallel num_threads(NUM_PORTS + 1) shared(ports, running_flag, start_time, node_comp_time, node_comm_time) 
+    {
+        int thread_id = omp_get_thread_num();
+        double comp_time = 0.0, comp_start_time;
+
+        if (thread_id < NUM_PORTS) {
+            double last_update = MPI_Wtime();
+            bool running;
+            #pragma omp atomic read
+            running = running_flag;
+
+            while (running) {
+                if (MPI_Wtime() - last_update > 2.0) {
+                    comp_start_time = MPI_Wtime();
+                    #pragma omp critical 
+                    { ports[thread_id] = (rand() % 100 < 70) ? 0 : 1; }
+                    comp_time += (MPI_Wtime() - comp_start_time);
+                    
+                    last_update = MPI_Wtime();
+                }
+                usleep(1000);
+                #pragma omp atomic read
+                running = running_flag;
+            }
+        } else { 
+            double comm_time = 0.0, comm_start_time;
+            int signal = 1, disable_signal, terminate_signal;
+            int requests[4] = {0}, reply_values[4] = {0};
+            int avail[4] = {NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR};
+            int neighbors[4] = {nbr_i_lo, nbr_i_hi, nbr_j_lo, nbr_j_hi};
+            MPI_Request incoming[4], answering[4], sending[4], receiving[4];
+            MPI_Request disable = MPI_REQUEST_NULL, terminate = MPI_REQUEST_NULL, ready = MPI_REQUEST_NULL;
+            MPI_Request report_send = MPI_REQUEST_NULL, base_receive = MPI_REQUEST_NULL;
+            MsgData report;
+            int count = 0, reply_stage = 0, coords_reply[16];
+            bool disabled = false, ready_sent = false, querying = false, awaiting_base = false;
+            double last_check = MPI_Wtime();
+            
+            comm_start_time = MPI_Wtime();
+            for (int i = 0; i < 4; ++i) {
+                incoming[i] = answering[i] = sending[i] = receiving[i] = MPI_REQUEST_NULL;
+                if (neighbors[i] != MPI_PROC_NULL) {
+                    MPI_Irecv(&requests[i], 1, MPI_INT, neighbors[i], MSG_REQ_NEIGHBOR, comm2D, &incoming[i]);
+                }
+            }
+            MPI_Irecv(&disable_signal, 1, MPI_INT, global_size - 1, MSG_DISABLE, world_comm, &disable);
+            MPI_Irecv(&terminate_signal, 1, MPI_INT, global_size - 1, MSG_TERMINATE, world_comm, &terminate);
+            comm_time += (MPI_Wtime() - comm_start_time);
+
+            for (;;) {
+                comm_start_time = MPI_Wtime();
+                bool disable_completed = complete(&disable);
+                comm_time += (MPI_Wtime() - comm_start_time);
+
+                if (!disabled && disable_completed) {
+                    disabled = true;
+                    #pragma omp atomic write
+                    running_flag = false; 
+                }
+
+                for (int i = 0; i < 4; ++i) {
+                    if (neighbors[i] == MPI_PROC_NULL) continue;
+                    
+                    comm_start_time = MPI_Wtime();
+                    bool ans_completed = complete(&answering[i]);
+                    comm_time += (MPI_Wtime() - comm_start_time);
+                    
+                    if (!ans_completed) continue;
+                    
+                    if (incoming[i] == MPI_REQUEST_NULL) {
+                        comm_start_time = MPI_Wtime();
+                        MPI_Irecv(&requests[i], 1, MPI_INT, neighbors[i], MSG_REQ_NEIGHBOR, comm2D, &incoming[i]);
+                        comm_time += (MPI_Wtime() - comm_start_time);
+                    }
+                    
+                    comm_start_time = MPI_Wtime();
+                    bool inc_completed = complete(&incoming[i]);
+                    comm_time += (MPI_Wtime() - comm_start_time);
+
+                    if (inc_completed) {
+                        int curr_avail = 0;
+                        comp_start_time = MPI_Wtime();
+                        #pragma omp critical 
+                        { for (int p = 0; p < NUM_PORTS; p++) curr_avail += ports[p]; }
+                        comp_time += (MPI_Wtime() - comp_start_time);
+                        
+                        reply_values[i] = curr_avail;
+                        
+                        comm_start_time = MPI_Wtime();
+                        MPI_Isend(&reply_values[i], 1, MPI_INT, neighbors[i], MSG_RES_NEIGHBOR, comm2D, &answering[i]);
+                        comm_time += (MPI_Wtime() - comm_start_time);
+                    }
+                }
+
+                if (awaiting_base) {
+                    comm_start_time = MPI_Wtime();
+                    bool send_done = complete(&report_send);
+                    bool base_recv_completed = complete(&base_receive);
+                    comm_time += (MPI_Wtime() - comm_start_time);
+
+                    if (reply_stage == 1 && base_recv_completed) {
+                        if (count > 0) {
+                            comm_start_time = MPI_Wtime();
+                            MPI_Irecv(coords_reply, count * 2, MPI_INT, global_size - 1, MSG_BS_REPLY, world_comm, &base_receive);
+                            comm_time += (MPI_Wtime() - comm_start_time);
+                            reply_stage = 2;
+                        } else {
+                            reply_stage = 3;
+                        }
+                    }
+                    
+                    if (reply_stage == 2) {
+                        comm_start_time = MPI_Wtime();
+                        bool stage2_completed = complete(&base_receive);
+                        comm_time += (MPI_Wtime() - comm_start_time);
+                        if (stage2_completed) reply_stage = 3;
+                    }
+                    
+                    if (reply_stage == 3 && send_done) {
+                        if (count == 0) {
+                            printf("[Node Rank %d at (%d,%d)] No available nodes nearby\n", global_rank, coord[0], coord[1]);
+                            fflush(stdout);
+                        } else {
+                            printf("[Node Rank %d at (%d,%d)] Nearest has %d available node(s): ", global_rank, coord[0], coord[1], count);
+                            for (int i = 0; i < count; i++) {
+                                printf("(%d,%d) ", coords_reply[i * 2], coords_reply[i * 2 + 1]);
+                            }
+                            printf("to EVs\n");
+                            fflush(stdout);
+                        }
+                        
+                        awaiting_base = false;
+                    }
+                }
+
+                if (querying) {
+                    int receives_done, sends_done;
+                    comm_start_time = MPI_Wtime();
+                    MPI_Testall(4, receiving, &receives_done, MPI_STATUSES_IGNORE);
+                    MPI_Testall(4, sending, &sends_done, MPI_STATUSES_IGNORE);
+                    comm_time += (MPI_Wtime() - comm_start_time);
+                    
+                    if (receives_done && sends_done) {
+                        querying = false;
+                        int loc_avail_ports = 0;
+                        
+                        comp_start_time = MPI_Wtime();
+                        #pragma omp critical 
+                        { for (int p = 0; p < NUM_PORTS; p++) loc_avail_ports += ports[p]; }
+                        
+                        bool all_neigh_full = true;
+                        for (int i = 0; i < 4; i++) {
+                            if (avail[i] > THRESHOLD) all_neigh_full = false;
+                        }
+                        comp_time += (MPI_Wtime() - comp_start_time);
+
+                        if (all_neigh_full) {
+                            comp_start_time = MPI_Wtime();
+                            report.timestamp = MPI_Wtime() - start_time;
+                            report.sender_rank = global_rank;
+                            report.coords[0] = coord[0];
+                            report.coords[1] = coord[1];
+                            report.avail_ports = loc_avail_ports;
+                            for (int i = 0; i < 4; i++) report.avail_neigh[i] = avail[i];
+                            report.msg_exchanged = 8;
+                            report.msg_size = 8 * sizeof(int);
+                            comp_time += (MPI_Wtime() - comp_start_time);
+
+                            comm_start_time = MPI_Wtime();
+                            MPI_Irecv(&count, 1, MPI_INT, global_size - 1, MSG_BS_REPLY, world_comm, &base_receive);
+                            MPI_Isend(&report, 1, report_type, global_size - 1, MSG_REPORT, world_comm, &report_send);
+                            comm_time += (MPI_Wtime() - comm_start_time);
+                            
+                            awaiting_base = true;
+                            reply_stage = 1;
+                        }
+                    }
+                }
+
+                if (!disabled && !querying && !awaiting_base && MPI_Wtime() - last_check >= 3.0) {
+                    last_check = MPI_Wtime();
+                    int loc_avail_ports = 0;
+                    
+                    comp_start_time = MPI_Wtime();
+                    #pragma omp critical 
+                    { for (int p = 0; p < NUM_PORTS; p++) loc_avail_ports += ports[p]; }
+                    comp_time += (MPI_Wtime() - comp_start_time);
+                    
+                    if (loc_avail_ports <= THRESHOLD) {
+                        querying = true;
+                        comm_start_time = MPI_Wtime();
+                        for (int i = 0; i < 4; ++i) {
+                            avail[i] = NO_NEIGHBOR;
+                            if (neighbors[i] == MPI_PROC_NULL) continue;
+                            MPI_Irecv(&avail[i], 1, MPI_INT, neighbors[i], MSG_RES_NEIGHBOR, comm2D, &receiving[i]);
+                            MPI_Isend(&signal, 1, MPI_INT, neighbors[i], MSG_REQ_NEIGHBOR, comm2D, &sending[i]);
+                        }
+                        comm_time += (MPI_Wtime() - comm_start_time);
+                    }
+                }
+
+                if (disabled && !querying && !awaiting_base && !ready_sent) {
+                    comm_start_time = MPI_Wtime();
+                    MPI_Isend(&signal, 1, MPI_INT, global_size - 1, MSG_READY, world_comm, &ready);
+                    comm_time += (MPI_Wtime() - comm_start_time);
+                    ready_sent = true;
+                }
+                
+                comm_start_time = MPI_Wtime();
+                bool term_completed = complete(&terminate);
+                comm_time += (MPI_Wtime() - comm_start_time);
+                
+                if (ready_sent && term_completed) {
+                    comm_start_time = MPI_Wtime();
+                    for (int i = 0; i < 4; ++i) cancel_receive(&incoming[i]);
+                    MPI_Waitall(4, answering, MPI_STATUSES_IGNORE);
+                    MPI_Wait(&ready, MPI_STATUS_IGNORE);
+                    
+                    MPI_Request ack;
+                    MPI_Isend(&signal, 1, MPI_INT, global_size - 1, MSG_TERMINATED, world_comm, &ack);
+                    MPI_Wait(&ack, MPI_STATUS_IGNORE);
+                    comm_time += (MPI_Wtime() - comm_start_time);
+                    break;
+                }
+                usleep(1000);
+            }
+            node_comm_time = comm_time;
+        }
+        #pragma omp atomic
+        node_comp_time += comp_time;
+    }
+
+    double overall_time = MPI_Wtime() - start_time;
+    double comp_time = node_comp_time;
+    double comm_time = node_comm_time;
+    
+    int comm2D_rank, slave_size;
+    MPI_Comm_rank(comm2D, &comm2D_rank);
+    MPI_Comm_size(comm2D, &slave_size);
+
+    double sum_overall = 0.0, sum_comm = 0.0, sum_comp = 0.0;
+    MPI_Reduce(&overall_time, &sum_overall, 1, MPI_DOUBLE, MPI_SUM, 0, comm2D);
+    MPI_Reduce(&comm_time, &sum_comm, 1, MPI_DOUBLE, MPI_SUM, 0, comm2D);
+    MPI_Reduce(&comp_time, &sum_comp, 1, MPI_DOUBLE, MPI_SUM, 0, comm2D);
+
+    if (comm2D_rank == 0) {
+        double avg_overall = sum_overall / slave_size;
+        double avg_comm = sum_comm / slave_size;
+        double avg_comp = sum_comp / slave_size;
+        printf(
+            "[Charging Nodes Average] Overall: %.4fs | Comm: %.4fs | Comp: %.4fs\n",
+            avg_overall, avg_comm, avg_comp
+        );
+        fflush(stdout);
+    }
+    MPI_Comm_free(&comm2D);
+}
+
+void MasterIO_V3(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datatype report_type) {
+    int global_size;
+    MPI_Comm_size(world_comm, &global_size);
+    int stations = global_size - 1;
+
+    int grid_state[nrows][ncols];  
+    double last_report_time[nrows][ncols];  
+    double PREDEFINED_PERIOD = 1.5;  
+    for (int r = 0; r < nrows; r++) {
+        for (int c = 0; c < ncols; c++) {
+            grid_state[r][c] = NUM_PORTS;
+            last_report_time[r][c] = -999;
+        }
+    }
+
+    FILE *log_file = fopen("log.txt", "w");
+    if (!log_file) {
+        printf("Error: Cannot open log file.\n");
+        return;
+    }
+
+    Peer *peers = calloc((size_t)stations, sizeof(*peers));
+    int signal = 1, ready_count = 0, ack_count = 0;
+    bool disabling = false, terminating = false;
+    
+    double start_time = MPI_Wtime();
+    double comm_time = 0.0, comm_start_time;
+    double comp_time = 0.0, comp_start_time;
+    
+    int ttl_alerts = 0, ttl_events = 0;
+
+    printf("[Base Station] LListening for reports...\n");
+    fflush(stdout);
+    fprintf(log_file, "----- SIMULATION STARTED -----\n");
+    fflush(log_file);
+
+    comm_start_time = MPI_Wtime();
+    for (int i = 0; i < stations; ++i) {
+        Peer *p = &peers[i];
+        p->count_send = p->coords_send = p->disable_send = p->terminate_send = MPI_REQUEST_NULL;
+        MPI_Irecv(&p->report, 1, report_type, i, MSG_REPORT, world_comm, &p->report_recv);
+        MPI_Irecv(&p->ready_value, 1, MPI_INT, i, MSG_READY, world_comm, &p->ready_recv);
+        MPI_Irecv(&p->ack_value, 1, MPI_INT, i, MSG_TERMINATED, world_comm, &p->ack_recv);
+    }
+    comm_time += (MPI_Wtime() - comm_start_time);
+
+    while (ack_count < stations) {
+        if (!disabling && MPI_Wtime() - start_time >= 30.0) {
+            printf("[Base Station] 30 seconds time limit reached. Shutting down...\n");
+            fflush(stdout);
+            disabling = true;
+            
+            comm_start_time = MPI_Wtime();
+            for (int i = 0; i < stations; ++i)
+                MPI_Isend(&signal, 1, MPI_INT, i, MSG_DISABLE, world_comm, &peers[i].disable_send);
+            comm_time += (MPI_Wtime() - comm_start_time);
+        }
+
+        for (int i = 0; i < stations; ++i) {
+            Peer *p = &peers[i];
+            
+            comm_start_time = MPI_Wtime();
+            bool count_done = complete(&p->count_send);
+            bool coords_done = complete(&p->coords_send);
+            comm_time += (MPI_Wtime() - comm_start_time);
+            
+            if (count_done && coords_done && !p->ready_seen) {
+                if (p->report_recv == MPI_REQUEST_NULL) {
+                    comm_start_time = MPI_Wtime();
+                    MPI_Irecv(&p->report, 1, report_type, i, MSG_REPORT, world_comm, &p->report_recv);
+                    comm_time += (MPI_Wtime() - comm_start_time);
+                }
+                
+                comm_start_time = MPI_Wtime();
+                bool report_completed = complete(&p->report_recv);
+                comm_time += (MPI_Wtime() - comm_start_time);
+                
+                if (report_completed) {
+                    comp_start_time = MPI_Wtime();
+                    ttl_alerts++;
+                    ttl_events += p->report.msg_exchanged + 1;
+                    double curr_time = MPI_Wtime();
+
+                    grid_state[p->report.coords[0]][p->report.coords[1]] = p->report.avail_ports;
+                    last_report_time[p->report.coords[0]][p->report.coords[1]] = curr_time;
+
+                    int nbr_coords[4][2] = {
+                        {p->report.coords[0] - 1, p->report.coords[1]},
+                        {p->report.coords[0] + 1, p->report.coords[1]},
+                        {p->report.coords[0], p->report.coords[1] - 1},
+                        {p->report.coords[0], p->report.coords[1] + 1}
+                    };
+
+                    bool all_nbrs_congested_recently = true;
+                    int valid_nbrs = 0;
+
+                    for (int n = 0; n < 4; n++) {
+                        if (p->report.avail_neigh[n] != NO_NEIGHBOR) {
+                            int r = nbr_coords[n][0];
+                            int c = nbr_coords[n][1];
+                            if (r >= 0 && r < nrows && c >= 0 && c < ncols) {
+                                grid_state[r][c] = p->report.avail_neigh[n];
+                                valid_nbrs++;
+                                if (last_report_time[r][c] < 0 || curr_time - last_report_time[r][c] > PREDEFINED_PERIOD) {
+                                    all_nbrs_congested_recently = false;
+                                }
+                            }
+                        }
+                    }
+
+                    int max_candidates = 8;
+                    p->count = 0; 
+
+                    if (valid_nbrs > 0 && all_nbrs_congested_recently) {
+                        fprintf(log_file, "T:%.2fs, No available nodes nearby\n", p->report.timestamp);
+                    } else {
+                        int max_dist = nrows + ncols;
+                        bool found = false;
+
+                        for (int d = 1; d <= max_dist && !found; d++) {
+                            for (int dx = -d; dx <= d; dx++) {
+                                int dy = d - abs(dx);
+                                int r = p->report.coords[0] + dx;
+                                int c = p->report.coords[1] + dy;
+                                if (r >= 0 && r < nrows && c >= 0 && c < ncols) {
+                                    if (grid_state[r][c] > THRESHOLD && p->count < max_candidates) {
+                                        p->coords[p->count * 2] = r;
+                                        p->coords[p->count * 2 + 1] = c;
+                                        p->count++;
+                                        found = true;
+                                    }
+                                }
+                                if (dy != 0) {
+                                    c = p->report.coords[1] - dy;
+                                    if (r >= 0 && r < nrows && c >= 0 && c < ncols) {
+                                        if (grid_state[r][c] > THRESHOLD && p->count < max_candidates) {
+                                            p->coords[p->count * 2] = r;
+                                            p->coords[p->count * 2 + 1] = c;
+                                            p->count++;
+                                            found = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    comp_time += (MPI_Wtime() - comp_start_time);
+
+                    comm_start_time = MPI_Wtime();
+                    MPI_Isend(&p->count, 1, MPI_INT, i, MSG_BS_REPLY, world_comm, &p->count_send);
+                    if (p->count > 0) {
+                        MPI_Isend(p->coords, p->count * 2, MPI_INT, i, MSG_BS_REPLY, world_comm, &p->coords_send);
+                    }
+                    comm_time += (MPI_Wtime() - comm_start_time);
+
+                    int best_row = (p->count > 0) ? p->coords[0] : -1;
+                    int best_col = (p->count > 0) ? p->coords[1] : -1;
+
+                    fprintf(
+                        log_file, "T:%.2fs | ALERT [%d] | Rank: %d Coord: (%d,%d) | Ports Free: %d | Neighbor Free: [T:%d, B:%d, L:%d, R:%d] | Msgs: %d | Msg Size: %d Bytes | Nearest: (%d,%d)\n",
+                        p->report.timestamp, ttl_alerts, p->report.sender_rank, p->report.coords[0], p->report.coords[1], 
+                        p->report.avail_ports, p->report.avail_neigh[0], p->report.avail_neigh[1], p->report.avail_neigh[2], p->report.avail_neigh[3], 
+                        p->report.msg_exchanged, p->report.msg_size, best_row, best_col
+                    );
+
+                    PrintGrid(log_file, p->report.timestamp, nrows, ncols, grid_state, p->report.coords[0], p->report.coords[1], best_row, best_col);
+                    fflush(log_file);
+                }
+            }
+
+            comm_start_time = MPI_Wtime();
+            bool ready_completed = complete(&p->ready_recv);
+            comm_time += (MPI_Wtime() - comm_start_time);
+            if (!p->ready_seen && ready_completed) {
+                p->ready_seen = true;
+                ++ready_count;
+            }
+            
+            comm_start_time = MPI_Wtime();
+            bool ack_completed = complete(&p->ack_recv);
+            comm_time += (MPI_Wtime() - comm_start_time);
+            if (terminating && !p->ack_seen && ack_completed) {
+                p->ack_seen = true;
+                ++ack_count;
+            }
+        }
+
+        if (disabling && ready_count == stations && !terminating) {
+            terminating = true;
+            comm_start_time = MPI_Wtime();
+            for (int i = 0; i < stations; ++i)
+                MPI_Isend(&signal, 1, MPI_INT, i, MSG_TERMINATE, world_comm, &peers[i].terminate_send);
+            comm_time += (MPI_Wtime() - comm_start_time);
+        }
+        usleep(1000);
+    }
+    
+    comm_start_time = MPI_Wtime();
+    for (int i = 0; i < stations; ++i) {
+        Peer *p = &peers[i];
+        cancel_receive(&p->report_recv);
+        MPI_Request sends[4] = {p->count_send, p->coords_send, p->disable_send, p->terminate_send};
+        MPI_Waitall(4, sends, MPI_STATUSES_IGNORE);
+    }
+    comm_time += (MPI_Wtime() - comm_start_time);
+    
+    free(peers);
+
+    double overall_time = MPI_Wtime() - start_time;
+    fprintf(log_file, "----- SIMULATION SUMMARY -----\n");
+    fprintf(log_file, "Total Simulation Time: %.4f seconds\n", overall_time);
+    fprintf(log_file, "Total Comm Time: %.4f seconds\n", comm_time);
+    fprintf(log_file, "Total Comp Time: %.4f seconds\n", comp_time);
+    fprintf(log_file, "Total Congestion Alerts: %d\n", ttl_alerts);
+    fprintf(log_file, "Total Communication Events: %d\n", ttl_events);
+    fclose(log_file);
+
+    printf("[Base Station] Overall: %.4fs | Comm: %.4fs | Comp: %.4fs\n", overall_time, comm_time, comp_time);
+    fflush(stdout);
+}
+// ==============================================================================
+
 int main(int argc, char **argv) {
     int rank, size, nrows = 3, ncols = 3;
     int permission;
+    int use_v3 = 0;
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &permission);
 
     if (permission < MPI_THREAD_MULTIPLE) {
@@ -714,9 +1250,22 @@ int main(int argc, char **argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    if (argc == 3) {
+    if (argc >= 3) {
         nrows = atoi(argv[1]);
         ncols = atoi(argv[2]);
+    }
+
+    if (argc == 4 && strcmp(argv[3], "v3") == 0) {
+        use_v3 = 1;
+        if (rank == 0) {
+            printf(">>> Running Version 3 Implementation <<<\n");
+            fflush(stdout);
+        } 
+    } else {
+        if (rank == 0) {
+            printf(">>> Running Electric Vehicle Charging Navigation System Simulation <<<\n");
+            fflush(stdout);
+        }
     }
 
     if ((nrows * ncols) != (size - 1)) {  // There must be a node as the base station
@@ -734,10 +1283,18 @@ int main(int argc, char **argv) {
     MPI_Comm new_comm;
     MPI_Comm_split(MPI_COMM_WORLD, rank == size - 1, 0, &new_comm);
 
-    if (rank == size - 1) {
-        MasterIO(MPI_COMM_WORLD, new_comm, nrows, ncols, report_type);
+    if (use_v3) {
+        if (rank == size - 1) {
+            MasterIO_V3(MPI_COMM_WORLD, new_comm, nrows, ncols, report_type);
+        } else {
+            SlaveIO_V3(MPI_COMM_WORLD, new_comm, nrows, ncols, report_type);
+        }
     } else {
-        SlaveIO(MPI_COMM_WORLD, new_comm, nrows, ncols, report_type);
+        if (rank == size - 1) {
+            MasterIO(MPI_COMM_WORLD, new_comm, nrows, ncols, report_type);
+        } else {
+            SlaveIO(MPI_COMM_WORLD, new_comm, nrows, ncols, report_type);
+        }
     }
 
     MPI_Type_free(&report_type);
