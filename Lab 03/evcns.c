@@ -229,7 +229,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                             comm_start_time = MPI_Wtime();
                             MPI_Recv(&dummy_count, 1, MPI_INT, global_size - 1, MSG_BS_REPLY, world_comm, MPI_STATUS_IGNORE);
                             if (dummy_count > 0) {
-                                int dummy_coords[16];
+                                int dummy_coords[2 * (global_size - 1)];
                                 MPI_Recv(dummy_coords, dummy_count * 2, MPI_INT, global_size - 1, MSG_BS_REPLY, world_comm, MPI_STATUS_IGNORE);
                             }
                             comm_time += (MPI_Wtime() - comm_start_time);
@@ -277,7 +277,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                         printf("[Node Rank %d at (%d,%d)] No available nodes nearby\n", global_rank, coord[0], coord[1]);
                         fflush(stdout);
                     } else {
-                        int reply_coords[16];  // Maximum 8 coordinates
+                        int reply_coords[2 * (global_size - 1)]; // Enough for all recommendations
                         MPI_Recv(reply_coords, found_count * 2, MPI_INT, global_size - 1, MSG_BS_REPLY, world_comm, MPI_STATUS_IGNORE);  // Receive the coordinates from the same distance
 
                         printf("[Node Rank %d at (%d,%d)] Nearest has %d available node(s): ", global_rank, coord[0], coord[1], found_count);
@@ -537,28 +537,8 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                     }
                 }
 
-                //---------------------------------
-                // Original: Brute-Force
-                //---------------------------------
-                /*
-                int best_row = -1, best_col = -1, min_dist = 999999;
-                for (int r = 0; r < nrows; r++) {
-                    for (int c = 0; c < ncols; c++) {
-                        if (grid_state[r][c] >= THRESHOLD && (r != report.coords[0] || c != report.coords[1])) {
-                            int dist = abs(r - report.coords[0]) + abs(c - report.coords[1]);
-                            if (dist < min_dist) {
-                                min_dist = dist;
-                                best_row = r;
-                                best_col = c;
-                            }
-                        }
-                    }
-                }
-                */
-                //---------------------------------
-
-                int max_candidates = 8;  // Available nodes at the same distance, assume has 8
-                int best_coords[16];
+                int max_candidates = global_size - 1; // Enough for all equal-nearest stations
+                int best_coords[2 * (global_size - 1)];
                 int found_count = 0;
 
                 if (valid_nbrs > 0 && all_nbrs_congested_recently) {  // This area is heavily congested
@@ -566,6 +546,30 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
                     fflush(log_file);
                     comp_time += (MPI_Wtime() - comp_start_time);
                 } else {  // The nodes may have free ports
+                    //---------------------------------
+                    // Original: Brute-Force (alternative to Diamond Scanning)
+                    // Enable only ONE search method. Both use found_count / best_coords.
+                    /*
+                    int min_dist = -1;
+                    for (int r = 0; r < nrows; r++) {
+                        for (int c = 0; c < ncols; c++) {
+                            if (grid_state[r][c] > THRESHOLD &&
+                                (r != report.coords[0] || c != report.coords[1])) {
+                                int dist = abs(r - report.coords[0]) + abs(c - report.coords[1]);
+                                if (min_dist < 0 || dist < min_dist) {
+                                    min_dist = dist;
+                                    found_count = 0;  // Discard farther candidates
+                                }
+                                if (dist == min_dist && found_count < max_candidates) {
+                                    best_coords[found_count * 2] = r;
+                                    best_coords[found_count * 2 + 1] = c;
+                                    found_count++;
+                                }
+                            }
+                        }
+                    }
+                    */
+                    //---------------------------------
                     //---------------------------------
                     // Optimization: A BFS for available ports by expanding outward in a ripple-like manner
                     //---------------------------------
@@ -714,7 +718,7 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
 
 typedef struct {
     MsgData report;
-    int count, coords[16], ready_value, ack_value;
+    int count, *coords, ready_value, ack_value;
     bool ready_seen, ack_seen;
     MPI_Request report_recv, count_send, coords_send, ready_recv, ack_recv;
     MPI_Request disable_send, terminate_send;
@@ -789,7 +793,7 @@ void SlaveIO_V3(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Da
             MPI_Request disable = MPI_REQUEST_NULL, terminate = MPI_REQUEST_NULL, ready = MPI_REQUEST_NULL;
             MPI_Request report_send = MPI_REQUEST_NULL, base_receive = MPI_REQUEST_NULL;
             MsgData report;
-            int count = 0, reply_stage = 0, coords_reply[16];
+            int count = 0, reply_stage = 0, coords_reply[2 * (global_size - 1)];
             bool disabled = false, ready_sent = false, querying = false, awaiting_base = false;
             double last_check = MPI_Wtime();
             
@@ -1035,6 +1039,7 @@ void MasterIO_V3(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_D
     }
 
     Peer *peers = calloc((size_t)stations, sizeof(*peers));
+    if (!peers) MPI_Abort(world_comm, EXIT_FAILURE);
     int signal = 1, ready_count = 0, ack_count = 0;
     bool disabling = false, terminating = false;
     
@@ -1052,6 +1057,8 @@ void MasterIO_V3(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_D
     comm_start_time = MPI_Wtime();
     for (int i = 0; i < stations; ++i) {
         Peer *p = &peers[i];
+        p->coords = malloc((size_t)stations * 2 * sizeof(int));
+        if (!p->coords) MPI_Abort(world_comm, EXIT_FAILURE);
         p->count_send = p->coords_send = p->disable_send = p->terminate_send = MPI_REQUEST_NULL;
         MPI_Irecv(&p->report, 1, report_type, i, MSG_REPORT, world_comm, &p->report_recv);
         MPI_Irecv(&p->ready_value, 1, MPI_INT, i, MSG_READY, world_comm, &p->ready_recv);
@@ -1123,7 +1130,7 @@ void MasterIO_V3(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_D
                         }
                     }
 
-                    int max_candidates = 8;
+                    int max_candidates = stations; // Return all equal-nearest stations
                     p->count = 0; 
 
                     if (valid_nbrs > 0 && all_nbrs_congested_recently) {
@@ -1219,6 +1226,7 @@ void MasterIO_V3(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_D
     }
     comm_time += (MPI_Wtime() - comm_start_time);
     
+    for (int i = 0; i < stations; ++i) free(peers[i].coords);
     free(peers);
 
     double overall_time = MPI_Wtime() - start_time;
