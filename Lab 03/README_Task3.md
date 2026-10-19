@@ -11,25 +11,34 @@
 7. The default random model is still 70% busy / 30% free, with six port workers and one communication thread. The original srand/rand approach is retained, with a recorded per-rank seed (default 2026 plus global_rank). Updates remain inside the original critical region. Thread scheduling can assign random draws differently, so identical seeds do not guarantee identical port traces or report counts.
 8. Per-message counters, bytes, local MPI API durations and observed request-completion durations are written to CSV. Final global checks require completed sends/receives and payload bytes to balance and no tracked requests to remain.
 
-The authoritative selected source is `v1/evcns.c`, with its accompanying `v1/task3_metrics.h`. Existing function/variable names and manual comm_time accumulation are retained. The unused MessageAPITotal helper and unused multi-version measurement switches were removed. The historical V2/V3 folders and logs are preserved. The upload ZIP provides this same V1-only source at its root for the first check and in v1/ for the batch runner.
+The authoritative selected source is `v1/evcns.c`, provided as a self-contained C file with embedded per-message measurements. Existing function/variable names and manual comm_time accumulation are retained. The unused MessageAPITotal helper and unused multi-version measurement switches were removed. The historical V2/V3 folders and logs are preserved. The batch runner snapshots the same self-contained v1/evcns.c before compiling.
 
 The previous Excel comparison describes the **earlier baseline runs**. New V1 results have a new report payload, controlled seeds and confirmed shutdown. Its total runtime no longer includes a fixed four-second drain. Do not combine old and new runs as though they used identical measurement protocols. Update the presentation shutdown diagram accordingly.
 
 ## First CAAS check
 
-Upload and extract the refreshed `V1_Task3_CAAS.zip`. Its root contains the selected V1-only `evcns.c`, matching `task3_metrics.h`, and the five-minute `run_evcns.slurm`. From the extracted directory:
+Upload the selected self-contained v1/evcns.c as evcns.c next to your existing CAAS run_evcns.slurm. No project header is needed. From that directory:
 
 ```bash
 sbatch run_evcns.slurm
 ```
 
-Each job is limited to five minutes. Results are isolated in `v1_runs/JOB_ID/`; the scheduler output is `v1_check_JOB_ID.out`. Check the full job and step exit states:
+Retain the resulting log.txt, message_metrics_rank_*.csv, message_metrics_global.csv, roundtrip_rank_*.csv and scheduler stdout. Use a separate directory for each manual run to preserve outputs. Check the job and step exit states:
 
 ```bash
 sacct -j JOB_ID --format=JobID,State,ExitCode
 ```
 
-The base log must end with balanced actual message totals and `Shutdown confirmed: READY=9 TERMINATED=9`. Use stdout to verify local neighbour referrals. Controlled tests verify multiple equal-nearest candidates; one random run alone might not exercise every path.
+The base log must end with balanced actual message totals and Shutdown confirmed: READY=9 TERMINATED=9 for 3x3. Use stdout to verify local neighbour referrals. The Task 3 batch runner automatically isolates each job and repetition.
+
+## Single-file build
+
+All project measurement/control functions are embedded in evcns.c. A separate task3_metrics.h is no longer needed. Existing V1 names, MPI calls and manual comm_time accumulation are retained.
+
+```bash
+mpicc -std=gnu11 -O2 -fopenmp -o evcns evcns.c
+srun -n 10 ./evcns 3 3 v1
+```
 
 ## Task 3 measurement definition
 
@@ -62,7 +71,7 @@ You can explicitly choose a smaller `--cpus-per-task` allocation only if appropr
 
 ## Submit period experiments, then mesh and line
 
-Upload the full `testing/task3` directory as well as `v1/evcns.c` and `v1/task3_metrics.h`. From CAAS:
+Upload the full `testing/task3` directory as well as the self-contained `v1/evcns.c`. From CAAS:
 
 ```bash
 cd testing/task3

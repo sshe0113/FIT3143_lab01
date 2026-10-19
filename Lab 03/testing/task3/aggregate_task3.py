@@ -25,7 +25,7 @@ def main():
         value=json.loads(path.read_text())
         if value['status']=='passed': manifests.append((path.parent,value))
     if not manifests: raise SystemExit('No validated runs found.')
-    protocols={(m['source_sha256'],m['metrics_sha256'],m['seconds'],m['port_period'],m['check_period'],m['busy_percent'],m['cpus_per_task']) for _,m in manifests}
+    protocols={(m['source_sha256'],m.get('metrics_sha256','embedded'),m['seconds'],m['port_period'],m['check_period'],m['busy_percent'],m['cpus_per_task']) for _,m in manifests}
     if len(protocols)!=1: raise SystemExit('Runs have mixed source/configuration/resource settings. Analyse each consistent group separately.')
     seen=set();message_rows=[];roundtrip_rows=[];period_rows=[]
     for folder,m in manifests:

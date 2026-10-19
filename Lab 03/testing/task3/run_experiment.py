@@ -37,7 +37,7 @@ def main():
     job_dir.mkdir(parents=True,exist_ok=False)
     snapshot=job_dir/'source'
     snapshot.mkdir()
-    for name in ['evcns.c','task3_metrics.h']: shutil.copy2(lab/'v1'/name,snapshot/name)
+    shutil.copy2(lab/'v1'/'evcns.c',snapshot/'evcns.c')
     executable=snapshot/'evcns'
     compile_result=subprocess.run(['mpicc','-std=gnu11','-O2','-fopenmp',str(snapshot/'evcns.c'),'-o',str(executable)],capture_output=True,text=True)
     (job_dir/'compile.txt').write_text(compile_result.stdout+compile_result.stderr)
@@ -50,7 +50,7 @@ def main():
         env=dict(os.environ,EVCNS_SECONDS=str(seconds),EVCNS_PORT_PERIOD='2',EVCNS_CHECK_PERIOD='3',EVCNS_PREDEFINED_PERIOD=period,EVCNS_SEED=str(seed),EVCNS_BUSY_PERCENT='70')
         env.pop('EVCNS_FREE_MAP',None)
         command=['srun','--exact','--kill-on-bad-exit=1','--cpu-bind=cores','-n',str(processes),str(executable),str(rows),str(cols),'v1']
-        manifest={'suite':suite,'case_id':case_id,'rows':rows,'cols':cols,'stations':rows*cols,'processes':processes,'replicate':replicate,'seed':seed,'predefined_period':float(period),'seconds':seconds,'port_period':2.0,'check_period':3.0,'busy_percent':70,'cpus_per_task':int(os.environ.get('SLURM_CPUS_PER_TASK','0')),'slurm_job_id':job_id,'node_list':os.environ.get('SLURM_JOB_NODELIST',''),'mpi_version':mpi_version,'source_sha256':sha(snapshot/'evcns.c'),'metrics_sha256':sha(snapshot/'task3_metrics.h'),'command':command,'started_unix':time.time(),'status':'running'}
+        manifest={'suite':suite,'case_id':case_id,'rows':rows,'cols':cols,'stations':rows*cols,'processes':processes,'replicate':replicate,'seed':seed,'predefined_period':float(period),'seconds':seconds,'port_period':2.0,'check_period':3.0,'busy_percent':70,'cpus_per_task':int(os.environ.get('SLURM_CPUS_PER_TASK','0')),'slurm_job_id':job_id,'node_list':os.environ.get('SLURM_JOB_NODELIST',''),'mpi_version':mpi_version,'source_sha256':sha(snapshot/'evcns.c'),'command':command,'started_unix':time.time(),'status':'running'}
         record=run_dir/'run_manifest.json'
         record.write_text(json.dumps(manifest,indent=2))
         try:
