@@ -19,7 +19,6 @@
 #include <stddef.h>
 #include <unistd.h>
 #include <string.h>
-#include <stdint.h>
 #include <limits.h>
 #include <errno.h>
 
@@ -40,12 +39,15 @@
 
 //=============================================================================
 // Task 3: per-message MPI measurements and the required simulation controls.
-// C1=neighbour request, C2=neighbour reply, C3=congestion report.
-// C4=base reply, C5=terminate; tags 6-8 coordinate confirmed shutdown.
+// C1=neighbour request, 
+// C2=neighbour reply, 
+// C3=congestion report.
+// C4=base reply, 
+// C5=terminate; tags 6-8 coordinate confirmed shutdown.
 // All timing uses MPI_Wtime(). No separate project header is required.
 //=============================================================================
 /* Controls and per-message timing required for Task 3. All point-to-point MPI calls below are
- * made by T6 (stations) or the one base thread; no metrics lock is necessary.
+ * made by T6 (stations) or the one base thread.
  * CSV timings use each rank's own clock. Request lifetime is NOT one-way wire
  * latency: preposted receives include idle waiting, and polling adds delay.
  */
@@ -53,65 +55,45 @@
 #define MSG_READY 7
 #define MSG_TERMINATED 8
 
-static double simulation_seconds = 30.0, port_period = 2.0, check_period = 3.0;
+// Fixed simulation duration and update/check intervals (seconds).
+static const double simulation_seconds = 30.0, port_period = 2.0, check_period = 3.0;
+
+// Base-station report freshness window; adjustable for the period experiments.
 static double predefined_period = 1.5;
-static unsigned simulation_seed = 2026u;
 static int busy_percent = 70;
 
-static void SimulationError(const char *message) {
-    fprintf(stderr, "EVCNS error: %s\n", message);
-    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-    exit(EXIT_FAILURE);
-}
-
+/**
+ * @brief     Parse an integer from a string and validate its range.
+ * @param text The string to parse.
+ * @param low The lower bound of the valid range.
+ * @param high The upper bound of the valid range.
+ * @return The parsed integer if valid, otherwise aborts the program.
+ */
 static long ParseInteger(const char *text, long low, long high) {
     char *end;
-    errno = 0;
+    errno = 0; // Reset errno before conversion
+
+    // Use strtol to convert the string to a long integer
     long value = strtol(text, &end, 10);
-    if (errno || end == text || *end || value < low || value > high)
-        SimulationError("invalid integer argument or environment variable");
-    return value;
-}
 
-static double ReadPeriod(const char *name, double fallback) {
-    const char *text = getenv(name);
-    if (!text) return fallback;
-    char *end;
-    errno = 0;
-    double value = strtod(text, &end);
-    if (errno || end == text || *end || !(value > 0.0 && value < 86400.0))
-        SimulationError("period/duration must be positive, finite and below 86400s");
-    return value;
-}
-
-/* Test-only fixture: one fixed free-port count (0..6) for every station rank.
- * Unset EVCNS_FREE_MAP for normal random simulations and performance runs.
- */
-static int FixedFreePorts(int rank, int stations) {
-    const char *text = getenv("EVCNS_FREE_MAP");
-    if (!text) return -1;
-    int chosen = -1;
-    for (int i = 0; i < stations; ++i) {
-        char *end;
-        errno = 0;
-        long value = strtol(text, &end, 10);
-        if (errno || end == text || value < 0 || value > NUM_PORTS)
-            SimulationError("EVCNS_FREE_MAP needs one 0..6 entry per station");
-        if (i == rank) chosen = (int)value;
-        if (i + 1 < stations) {
-            if (*end != ',') SimulationError("EVCNS_FREE_MAP is too short");
-            text = end + 1;
-        } else if (*end) SimulationError("EVCNS_FREE_MAP has extra/invalid entries");
+    // Check for errors: conversion failure, out of range, or extra characters
+    if (errno != 0|| end == text || *end || value < low || value > high) {
+        fprintf(stderr, "EVCNS error: %s\n", "invalid integer argument or environment variable");
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
-    return chosen;
+    return value;
 }
 
 static void IncidentDateTime(char text[32]) {
     time_t now = time(NULL);
     struct tm calendar;
     if (!localtime_r(&now, &calendar) ||
-        !strftime(text, 32, "%Y-%m-%dT%H:%M:%S%z", &calendar))
-        SimulationError("cannot format incident date/time");
+        !strftime(text, 32, "%Y-%m-%dT%H:%M:%S%z", &calendar)) {
+        fprintf(stderr, "EVCNS error: %s\n", "cannot format incident date/time");
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        exit(EXIT_FAILURE);
+    }
 }
 
 static void LocalReferral(int rank, const int coord[2], const int avail[4]) {
@@ -127,266 +109,67 @@ static void LocalReferral(int rank, const int coord[2], const int avail[4]) {
 }
 
 typedef struct {
-    long long sent, received, send_bytes, receive_bytes, cancelled;
-    double send_api, receive_api, progress_api, send_lifetime, receive_lifetime;
+    long long sent, received, send_bytes, receive_bytes;
+    double send_call_time;    // Total time inside MPI_Send / MPI_Isend.
+    double receive_call_time; // Total time inside MPI_Recv / MPI_Irecv.
+    double send_lifetime, receive_lifetime; // Start until completion is observed.
 } MessageMetric;
 
-typedef struct {
-    MPI_Request *slot; /* Storage identity: completed eager sends may share a handle. */
-    MPI_Datatype datatype;
-    int state, tag;
-    long long bytes;
-    bool sending;
-    double started;
-} TrackedRequest;
-
+// One set of totals per message tag, local to this MPI process.
 static MessageMetric message_metrics[9];
-static TrackedRequest *request_table;
-static size_t request_capacity, request_used, request_deleted;
-static long long roundtrip_count[2];
-static double roundtrip_seconds[2];
 
-static size_t RequestHash(MPI_Request *slot) {
-    const unsigned char *bytes = (const unsigned char *)&slot;
-    size_t hash = 2166136261u;
-    for (size_t i = 0; i < sizeof(slot); ++i) hash = (hash ^ bytes[i]) * 16777619u;
-    return hash;
-}
-
-static void ResizeRequestTable(size_t capacity) {
-    TrackedRequest *old = request_table;
-    size_t previous = request_capacity;
-    request_table = calloc(capacity, sizeof(*request_table));
-    if (!request_table) SimulationError("cannot allocate metrics request table");
-    request_capacity = capacity;
-    request_deleted = 0;
-    for (size_t i = 0; i < previous; ++i) {
-        if (old[i].state != 1) continue;
-        size_t slot = RequestHash(old[i].slot) & (capacity-1);
-        while (request_table[slot].state == 1) slot = (slot+1) & (capacity-1);
-        request_table[slot] = old[i];
-    }
-    free(old);
-}
-
-static TrackedRequest *FindRequest(MPI_Request *storage) {
-    if (!storage || !request_capacity) return NULL;
-    size_t slot = RequestHash(storage) & (request_capacity-1);
-    while (request_table[slot].state != 0) {
-        if (request_table[slot].state == 1 && request_table[slot].slot == storage)
-            return &request_table[slot];
-        slot = (slot+1) & (request_capacity-1);
-    }
-    return NULL;
-}
-
-static void TrackRequest(MPI_Request *storage, int tag, MPI_Datatype type,
-                         int count, bool sending, double started) {
-    if (*storage == MPI_REQUEST_NULL) return;
-    if (tag < 1 || tag > 8) SimulationError("unrecognized message tag in metrics");
-    if (!request_capacity) ResizeRequestTable(128);
-    if ((request_used + request_deleted + 1) * 10 >= request_capacity * 7)
-        ResizeRequestTable(request_used * 2 >= request_capacity ? request_capacity*2 : request_capacity);
-    size_t slot = RequestHash(storage) & (request_capacity-1), deleted = SIZE_MAX;
-    while (request_table[slot].state != 0) {
-        if (request_table[slot].state == 2 && deleted == SIZE_MAX) deleted = slot;
-        if (request_table[slot].state == 1 && request_table[slot].slot == storage)
-            SimulationError("MPI request reused before completion");
-        slot = (slot+1) & (request_capacity-1);
-    }
-    if (deleted != SIZE_MAX) { slot = deleted; --request_deleted; }
-    int size;
-    MPI_Type_size(type, &size);
-    request_table[slot] = (TrackedRequest){storage, type, 1, tag, (long long)count*size, sending, started};
-    ++request_used;
-}
-
-static void FinishRequest(MPI_Request *storage, MPI_Request previous, const MPI_Status *status) {
-    if (previous == MPI_REQUEST_NULL) return;
-    TrackedRequest *record = FindRequest(storage);
-    if (!record) SimulationError("completed MPI request was not tracked");
-    MessageMetric *metric = &message_metrics[record->tag];
-    int cancelled;
-    MPI_Test_cancelled(status, &cancelled); /* Other status fields are undefined if cancelled. */
-    double elapsed = MPI_Wtime() - record->started;
-    if (cancelled) ++metric->cancelled;
-    else if (record->sending) {
-        ++metric->sent;
-        metric->send_bytes += record->bytes;
-        metric->send_lifetime += elapsed;
-    } else {
-        int count, size;
-        MPI_Get_count(status, record->datatype, &count);
-        MPI_Type_size(record->datatype, &size);
-        if (count == MPI_UNDEFINED) SimulationError("receive count/datatype mismatch");
-        ++metric->received;
-        metric->receive_bytes += (long long)count * size;
-        metric->receive_lifetime += elapsed;
-    }
-    record->state = 2;
-    --request_used;
-    ++request_deleted;
-}
-
-static void AttributeProgress(MPI_Request *storage, double seconds) {
-    TrackedRequest *record = FindRequest(storage);
-    if (record) message_metrics[record->tag].progress_api += seconds;
-}
-
-static int MeasuredSend(const void *buffer, int count, MPI_Datatype type,
-                        int peer, int tag, MPI_Comm comm) {
-    double start = MPI_Wtime();
-#ifdef EVCNS_SYNC_SEND
-    int error = MPI_Ssend(buffer, count, type, peer, tag, comm);
-#else
-    int error = MPI_Send(buffer, count, type, peer, tag, comm);
-#endif
-    double elapsed = MPI_Wtime()-start;
-    if (peer != MPI_PROC_NULL && error == MPI_SUCCESS) {
-        int size;
-        MPI_Type_size(type, &size);
-        MessageMetric *metric = &message_metrics[tag];
-        ++metric->sent;
-        metric->send_bytes += (long long)count*size;
-        metric->send_api += elapsed;
-        metric->send_lifetime += elapsed;
-    }
-    return error;
-}
-
-static int MeasuredRecv(void *buffer, int count, MPI_Datatype type,
-                        int peer, int tag, MPI_Comm comm, MPI_Status *status) {
-    MPI_Status actual;
-    double start = MPI_Wtime();
-    int error = MPI_Recv(buffer, count, type, peer, tag, comm, &actual);
-    double elapsed = MPI_Wtime()-start;
-    if (status != MPI_STATUS_IGNORE) *status = actual;
-    if (peer != MPI_PROC_NULL && error == MPI_SUCCESS) {
-        int received, size;
-        MPI_Get_count(&actual, type, &received);
-        MPI_Type_size(type, &size);
-        if (received == MPI_UNDEFINED) SimulationError("receive count/datatype mismatch");
-        MessageMetric *metric = &message_metrics[actual.MPI_TAG];
-        ++metric->received;
-        metric->receive_bytes += (long long)received*size;
-        metric->receive_api += elapsed;
-        metric->receive_lifetime += elapsed;
-    }
-    return error;
-}
-
-static int MeasuredIsend(const void *buffer, int count, MPI_Datatype type,
-                         int peer, int tag, MPI_Comm comm, MPI_Request *request) {
-    double start = MPI_Wtime();
-#ifdef EVCNS_SYNC_SEND
-    int error = MPI_Issend(buffer, count, type, peer, tag, comm, request);
-#else
-    int error = MPI_Isend(buffer, count, type, peer, tag, comm, request);
-#endif
-    double elapsed = MPI_Wtime()-start;
-    if (peer != MPI_PROC_NULL && error == MPI_SUCCESS) {
-        message_metrics[tag].send_api += elapsed;
-        TrackRequest(request, tag, type, count, true, start);
-    }
-    return error;
-}
-
-static int MeasuredIrecv(void *buffer, int count, MPI_Datatype type,
-                         int peer, int tag, MPI_Comm comm, MPI_Request *request) {
-    double start = MPI_Wtime();
-    int error = MPI_Irecv(buffer, count, type, peer, tag, comm, request);
-    double elapsed = MPI_Wtime()-start;
-    if (peer != MPI_PROC_NULL && error == MPI_SUCCESS) {
-        message_metrics[tag].receive_api += elapsed;
-        TrackRequest(request, tag, type, count, false, start);
-    }
-    return error;
-}
-
-static int MeasuredTestall(int count, MPI_Request *requests, int *done, MPI_Status *statuses) {
-    MPI_Request old[count > 0 ? count : 1];
-    MPI_Status actual[count > 0 ? count : 1];
-    int active = 0;
-    for (int i=0; i<count; ++i) { old[i]=requests[i]; active += old[i]!=MPI_REQUEST_NULL; }
-    double start=MPI_Wtime();
-    int error=MPI_Testall(count,requests,done,actual);
-    double share=active ? (MPI_Wtime()-start)/active : 0;
-    for(int i=0;i<count;++i) AttributeProgress(&requests[i],share);
-    if (*done && error==MPI_SUCCESS) for(int i=0;i<count;++i) {
-        if(statuses!=MPI_STATUSES_IGNORE) statuses[i]=actual[i];
-        FinishRequest(&requests[i],old[i],&actual[i]);
-    }
-    return error;
-}
-
-static int MeasuredWaitall(int count, MPI_Request *requests, MPI_Status *statuses) {
-    MPI_Request old[count > 0 ? count : 1];
-    MPI_Status actual[count > 0 ? count : 1];
-    int active=0;
-    for(int i=0;i<count;++i) { old[i]=requests[i]; active+=old[i]!=MPI_REQUEST_NULL; }
-    double start=MPI_Wtime();
-    int error=MPI_Waitall(count,requests,actual);
-    double share=active ? (MPI_Wtime()-start)/active : 0;
-    for(int i=0;i<count;++i) AttributeProgress(&requests[i],share);
-    if(error==MPI_SUCCESS) for(int i=0;i<count;++i) {
-        if(statuses!=MPI_STATUSES_IGNORE) statuses[i]=actual[i];
-        FinishRequest(&requests[i],old[i],&actual[i]);
-    }
-    return error;
-}
-
-static void RecordRoundtrip(int kind, double started) {
-    if (started < 0) SimulationError("reply arrived without an outstanding report");
-    ++roundtrip_count[kind];
-    roundtrip_seconds[kind] += MPI_Wtime()-started;
-}
-
+/**
+ * @brief     Write the message metrics to a CSV file for analysis.
+ * @param rows The number of rows in the grid.
+ * @param cols The number of columns in the grid.
+ * @param version The version of the simulation.
+ */
 static void WriteMetrics(int rows,int cols,int version) {
     int rank,size;
     MPI_Comm_rank(MPI_COMM_WORLD,&rank);
     MPI_Comm_size(MPI_COMM_WORLD,&size);
-    if(request_used) SimulationError("uncompleted tracked MPI requests at shutdown");
     const char *names[9]={"","C1_REQUEST","C2_RESPONSE","C3_REPORT","C4_BASE_REPLY",
                          "C5_TERMINATE","DISABLE","READY","TERMINATED"};
     char path[80];
     snprintf(path,sizeof(path),"message_metrics_rank_%d.csv",rank);
     FILE *file=fopen(path,"w");
-    if(!file) SimulationError("cannot write message metrics");
-    fprintf(file,"version,rank,role,rows,cols,tag,message,sent,received,send_bytes,receive_bytes,cancelled_receives,send_api_seconds,receive_api_seconds,progress_api_seconds,send_completion_seconds,receive_completion_seconds\n");
+    if(!file) {
+        fprintf(stderr, "EVCNS error: %s\n", "cannot write message metrics");
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        exit(EXIT_FAILURE);
+    }
+    fprintf(file,"version,rank,role,rows,cols,tag,message,sent,received,send_bytes,receive_bytes,send_call_time_seconds,receive_call_time_seconds,send_completion_seconds,receive_completion_seconds\n");
     long long counts[8*4],sums[8*4];
     for(int tag=1;tag<=8;++tag) {
         MessageMetric *m=&message_metrics[tag];
-        fprintf(file,"v%d,%d,%s,%d,%d,%d,%s,%lld,%lld,%lld,%lld,%lld,%.9f,%.9f,%.9f,%.9f,%.9f\n",
+        fprintf(file,"v%d,%d,%s,%d,%d,%d,%s,%lld,%lld,%lld,%lld,%.9f,%.9f,%.9f,%.9f\n",
                 version,rank,rank==size-1?"base":"station",rows,cols,tag,names[tag],
-                m->sent,m->received,m->send_bytes,m->receive_bytes,m->cancelled,
-                m->send_api,m->receive_api,m->progress_api,m->send_lifetime,m->receive_lifetime);
+                m->sent,m->received,m->send_bytes,m->receive_bytes,
+                m->send_call_time,m->receive_call_time,m->send_lifetime,m->receive_lifetime);
         counts[(tag-1)*4]=m->sent;
         counts[(tag-1)*4+1]=m->received;
         counts[(tag-1)*4+2]=m->send_bytes;
         counts[(tag-1)*4+3]=m->receive_bytes;
     }
     fclose(file);
-    snprintf(path,sizeof(path),"roundtrip_rank_%d.csv",rank);
-    file=fopen(path,"w");
-    if(!file) SimulationError("cannot write round-trip metrics");
-    fprintf(file,"version,rank,operation,samples,total_seconds,mean_microseconds\n");
-    for(int i=0;i<2;++i) {
-        fprintf(file,"v%d,%d,%s,%lld,%.9f,",version,rank,i?"C3_C4_ROUNDTRIP":"C1_C2_ENQUIRY",
-                roundtrip_count[i],roundtrip_seconds[i]);
-        if(roundtrip_count[i]) fprintf(file,"%.6f\n",roundtrip_seconds[i]*1e6/roundtrip_count[i]);
-        else fprintf(file,"NA\n");
-    }
-    fclose(file);
     MPI_Reduce(counts,sums,8*4,MPI_LONG_LONG_INT,MPI_SUM,size-1,MPI_COMM_WORLD);
     if(rank==size-1) {
         file=fopen("message_metrics_global.csv","w");
         FILE *log=fopen("log.txt","a");
-        if(!file||!log) SimulationError("cannot write global metrics");
+        if(!file||!log) {
+            fprintf(stderr, "EVCNS error: %s\n", "cannot write global metrics");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+            exit(EXIT_FAILURE);
+        }
         fprintf(file,"version,rows,cols,tag,message,sent,received,send_bytes,receive_bytes\n");
         long long total=0;
         for(int tag=1;tag<=8;++tag) {
             long long *p=&sums[(tag-1)*4];
-            if(p[0]!=p[1]||p[2]!=p[3]) SimulationError("sent/received metrics do not balance");
+            if(p[0]!=p[1]||p[2]!=p[3]) {
+                fprintf(stderr, "EVCNS error: %s\n", "sent/received metrics do not balance");
+                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                exit(EXIT_FAILURE);
+            }
             total+=p[0];
             fprintf(file,"v%d,%d,%d,%d,%s,%lld,%lld,%lld,%lld\n",version,rows,cols,tag,names[tag],p[0],p[1],p[2],p[3]);
         }
@@ -396,17 +179,9 @@ static void WriteMetrics(int rows,int cols,int version) {
         fclose(log);
         printf("[Validation] All point-to-point sends/receives balanced. READY=%lld TERMINATED=%lld\n",sums[6*4],sums[7*4]);
     }
-    free(request_table);
 }
 
-/* Instrumentation wrappers call the real MPI routines above. They preserve the
- * blocking/nonblocking distinction and do not add protocol messages. */
-#define MPI_Send MeasuredSend
-#define MPI_Recv MeasuredRecv
-#define MPI_Isend MeasuredIsend
-#define MPI_Irecv MeasuredIrecv
-#define MPI_Testall MeasuredTestall
-#define MPI_Waitall MeasuredWaitall
+// Measurements below use the real MPI routines and MPI_Wtime directly.
 //=============================================================================
 // Existing V1 report type, node simulation and base-station implementation.
 //=============================================================================
@@ -499,7 +274,10 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
     MPI_Comm_size(world_comm, &global_size);
     MPI_Comm_rank(world_comm, &global_rank);
 
-    srand(simulation_seed + global_rank); // Original srand/rand approach; seed is recorded for experiments
+    int report_bytes;
+    MPI_Type_size(report_type, &report_bytes);
+
+    srand(time(NULL) + global_rank); // Original random initialization using time and process rank.
 
     int dims[2] = {nrows, ncols}, coord[2], wrap_around[2] = {0, 0};  // 2D Mesh
     int nbr_i_lo, nbr_i_hi, nbr_j_lo, nbr_j_hi;  // Top, Bottom, Left, Right
@@ -510,9 +288,8 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
     MPI_Cart_shift(comm2D, SHIFT_R0W, DISP, &nbr_i_lo, &nbr_i_hi);
     MPI_Cart_shift(comm2D, SHIFT_COL, DISP, &nbr_j_lo, &nbr_j_hi);
 
-    int fixed_free = FixedFreePorts(global_rank, global_size - 1);
     int ports[NUM_PORTS];
-    for (int i = 0; i < NUM_PORTS; i++) ports[i] = fixed_free < 0 ? 1 : i < fixed_free;
+    for (int i = 0; i < NUM_PORTS; i++) ports[i] = 1; // Initially all ports are free.
     bool running_flag = true;  // true means simulation is running, false otherwise
     MPI_Barrier(world_comm); // Start only after all ranks have initialized
     double start_time = MPI_Wtime();  // Record time
@@ -522,7 +299,11 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
     #pragma omp parallel num_threads(NUM_PORTS + 1) shared(ports, running_flag, start_time, node_comp_time, node_comm_time) 
     {
         int thread_id = omp_get_thread_num();
-        if (omp_get_num_threads() != NUM_PORTS + 1) SimulationError("seven OpenMP threads are required");
+        if (omp_get_num_threads() != NUM_PORTS + 1) {
+            fprintf(stderr, "EVCNS error: %s\n", "seven OpenMP threads are required");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+            exit(EXIT_FAILURE);
+        }
         double comp_time = 0.0, comp_start_time;
 
         if (thread_id < NUM_PORTS) {
@@ -533,7 +314,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
 
             while (running) {
                 // Every two seconds perform once (random change a port status)
-                if (fixed_free < 0 && MPI_Wtime() - last_update >= port_period) {
+                if (MPI_Wtime() - last_update >= port_period) {
                     comp_start_time = MPI_Wtime();
                     #pragma omp critical  // Mutex lock
                     {  
@@ -551,10 +332,10 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
             double last_check = MPI_Wtime();
             bool running = true;
             bool disabled = false, ready_sent = false, awaiting_base = false;
-            double report_started = -1.0;
             int flag;  // Used by MPI_Iprobe, 1 means a msg is waiting to be read
             MPI_Status probe_status;  // Keep track who are the sender and what tag of msg sender send
             double comm_time = 0.0, comm_start_time;
+            double message_start, message_elapsed;
 
             while (running) {
                 // Stop new enquiries, then finish C1-C4 while still answering peers.
@@ -564,7 +345,13 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                 if (flag) {
                     int signal;
                     comm_start_time = MPI_Wtime();
+                    message_start = MPI_Wtime();
                     MPI_Recv(&signal,1,MPI_INT,global_size-1,MSG_DISABLE,world_comm,MPI_STATUS_IGNORE);
+                    message_elapsed = MPI_Wtime() - message_start;
+                    message_metrics[MSG_DISABLE].received++;
+                    message_metrics[MSG_DISABLE].receive_bytes += (long long)(1) * sizeof(int);
+                    message_metrics[MSG_DISABLE].receive_call_time += message_elapsed;
+                    message_metrics[MSG_DISABLE].receive_lifetime += message_elapsed;
                     comm_time += (MPI_Wtime() - comm_start_time);
                     disabled = true;
                     #pragma omp atomic write
@@ -579,7 +366,13 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                 if (flag) {
                     int req_sig;
                     comm_start_time = MPI_Wtime();
+                    message_start = MPI_Wtime();
                     MPI_Recv(&req_sig, 1, MPI_INT, probe_status.MPI_SOURCE, MSG_REQ_NEIGHBOR, comm2D, MPI_STATUS_IGNORE);
+                    message_elapsed = MPI_Wtime() - message_start;
+                    message_metrics[MSG_REQ_NEIGHBOR].received++;
+                    message_metrics[MSG_REQ_NEIGHBOR].receive_bytes += (long long)(1) * sizeof(int);
+                    message_metrics[MSG_REQ_NEIGHBOR].receive_call_time += message_elapsed;
+                    message_metrics[MSG_REQ_NEIGHBOR].receive_lifetime += message_elapsed;
                     comm_time += (MPI_Wtime() - comm_start_time);
 
                     comp_start_time = MPI_Wtime();
@@ -591,7 +384,13 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                     comp_time += (MPI_Wtime() - comp_start_time);
 
                     comm_start_time = MPI_Wtime();
+                    message_start = MPI_Wtime();
                     MPI_Send(&curr_avail, 1, MPI_INT, probe_status.MPI_SOURCE, MSG_RES_NEIGHBOR, comm2D);
+                    message_elapsed = MPI_Wtime() - message_start;
+                    message_metrics[MSG_RES_NEIGHBOR].sent++;
+                    message_metrics[MSG_RES_NEIGHBOR].send_bytes += (long long)(1) * sizeof(int);
+                    message_metrics[MSG_RES_NEIGHBOR].send_call_time += message_elapsed;
+                    message_metrics[MSG_RES_NEIGHBOR].send_lifetime += message_elapsed;
                     comm_time += (MPI_Wtime() - comm_start_time);
                 }
 
@@ -604,15 +403,31 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                     int found_count;
                     comm_start_time = MPI_Wtime();
                     // The number of available nodes found by the Base Station
+                    message_start = MPI_Wtime();
                     MPI_Recv(&found_count, 1, MPI_INT, global_size - 1, MSG_BS_REPLY, world_comm, MPI_STATUS_IGNORE);
+                    message_elapsed = MPI_Wtime() - message_start;
+                    message_metrics[MSG_BS_REPLY].received++;
+                    message_metrics[MSG_BS_REPLY].receive_bytes += (long long)(1) * sizeof(int);
+                    message_metrics[MSG_BS_REPLY].receive_call_time += message_elapsed;
+                    message_metrics[MSG_BS_REPLY].receive_lifetime += message_elapsed;
 
-                    if (found_count < 0 || found_count > global_size-1) SimulationError("invalid candidate count");
+                    if (found_count < 0 || found_count > global_size-1) {
+                        fprintf(stderr, "EVCNS error: %s\n", "invalid candidate count");
+                        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                        exit(EXIT_FAILURE);
+                    }
                     if (found_count == 0) {  // No available nodes
                         printf("[Node Rank %d at (%d,%d)] No available nodes nearby\n", global_rank, coord[0], coord[1]);
                         fflush(stdout);
                     } else {
                         int reply_coords[2 * (global_size - 1)]; // Enough for all recommendations
+                        message_start = MPI_Wtime();
                         MPI_Recv(reply_coords, found_count * 2, MPI_INT, global_size - 1, MSG_BS_REPLY, world_comm, MPI_STATUS_IGNORE);  // Receive the coordinates from the same distance
+                        message_elapsed = MPI_Wtime() - message_start;
+                        message_metrics[MSG_BS_REPLY].received++;
+                        message_metrics[MSG_BS_REPLY].receive_bytes += (long long)(found_count * 2) * sizeof(int);
+                        message_metrics[MSG_BS_REPLY].receive_call_time += message_elapsed;
+                        message_metrics[MSG_BS_REPLY].receive_lifetime += message_elapsed;
 
                         printf("[Node Rank %d at (%d,%d)] Nearest has %d available node(s): ", global_rank, coord[0], coord[1], found_count);
                         for (int i = 0; i < found_count; i++) {
@@ -621,7 +436,6 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                         printf("to EVs\n");
                     }
                     fflush(stdout);
-                    RecordRoundtrip(1, report_started);
                     awaiting_base = false;
                     comm_time += (MPI_Wtime() - comm_start_time);
                 }
@@ -647,13 +461,17 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                         //---------------------------------
                         // Optimization: Using MPI_Isend & MPI_Irecv
                         //---------------------------------
-                        double enquiry_started = MPI_Wtime();
                         MPI_Request reqs[4], recv[4];
+                        double send_started[4], receive_started[4];
                         comm_start_time = MPI_Wtime();
                         for (int i = 0; i < 4; i++) {
                             if (neighbors[i] != MPI_PROC_NULL) {
+                                send_started[req_count] = MPI_Wtime();
                                 MPI_Isend(&req, 1, MPI_INT, neighbors[i], MSG_REQ_NEIGHBOR, comm2D, &reqs[req_count]);
+                                message_metrics[MSG_REQ_NEIGHBOR].send_call_time += MPI_Wtime() - send_started[req_count];
+                                receive_started[req_count] = MPI_Wtime();
                                 MPI_Irecv(&neigh_ports[i], 1, MPI_INT, neighbors[i], MSG_RES_NEIGHBOR, comm2D, &recv[req_count]);
+                                message_metrics[MSG_RES_NEIGHBOR].receive_call_time += MPI_Wtime() - receive_started[req_count];
                                 req_count++;
                             }
                         }
@@ -668,6 +486,12 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                                 comm_time += (MPI_Wtime() - comm_start_time);
 
                                 if (recv_flag) {
+                                    // All C2 replies are now complete; record one sample per neighbour.
+                                    double completed = MPI_Wtime();
+                                    message_metrics[MSG_RES_NEIGHBOR].received += req_count;
+                                    message_metrics[MSG_RES_NEIGHBOR].receive_bytes += (long long)req_count * sizeof(int);
+                                    for (int i = 0; i < req_count; i++)
+                                        message_metrics[MSG_RES_NEIGHBOR].receive_lifetime += completed - receive_started[i];
                                     wait_done = true;
                                 } else {
                                     int inc_flag;
@@ -679,7 +503,13 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                                     if (inc_flag) {
                                         int inc_sig;
                                         comm_start_time = MPI_Wtime();
+                                        message_start = MPI_Wtime();
                                         MPI_Recv(&inc_sig, 1, MPI_INT, inc_status.MPI_SOURCE, MSG_REQ_NEIGHBOR, comm2D, MPI_STATUS_IGNORE);
+                                        message_elapsed = MPI_Wtime() - message_start;
+                                        message_metrics[MSG_REQ_NEIGHBOR].received++;
+                                        message_metrics[MSG_REQ_NEIGHBOR].receive_bytes += (long long)(1) * sizeof(int);
+                                        message_metrics[MSG_REQ_NEIGHBOR].receive_call_time += message_elapsed;
+                                        message_metrics[MSG_REQ_NEIGHBOR].receive_lifetime += message_elapsed;
                                         comm_time += (MPI_Wtime() - comm_start_time);
 
                                         comp_start_time = MPI_Wtime();
@@ -691,7 +521,13 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                                         comp_time += (MPI_Wtime() - comp_start_time);
 
                                         comm_start_time = MPI_Wtime();
+                                        message_start = MPI_Wtime();
                                         MPI_Send(&curr_avail, 1, MPI_INT, inc_status.MPI_SOURCE, MSG_RES_NEIGHBOR, comm2D);
+                                        message_elapsed = MPI_Wtime() - message_start;
+                                        message_metrics[MSG_RES_NEIGHBOR].sent++;
+                                        message_metrics[MSG_RES_NEIGHBOR].send_bytes += (long long)(1) * sizeof(int);
+                                        message_metrics[MSG_RES_NEIGHBOR].send_call_time += message_elapsed;
+                                        message_metrics[MSG_RES_NEIGHBOR].send_lifetime += message_elapsed;
                                         comm_time += (MPI_Wtime() - comm_start_time);
                                     } else {
                                         usleep(1000);
@@ -700,10 +536,14 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                             }
                             comm_start_time = MPI_Wtime();
                             MPI_Waitall(req_count, reqs, MPI_STATUSES_IGNORE);
+                            double completed = MPI_Wtime();
+                            message_metrics[MSG_REQ_NEIGHBOR].sent += req_count;
+                            message_metrics[MSG_REQ_NEIGHBOR].send_bytes += (long long)req_count * sizeof(int);
+                            for (int i = 0; i < req_count; i++)
+                                message_metrics[MSG_REQ_NEIGHBOR].send_lifetime += completed - send_started[i];
                             comm_time += (MPI_Wtime() - comm_start_time);
                         }
                         //---------------------------------
-                        RecordRoundtrip(0, enquiry_started);
 
                         comp_start_time = MPI_Wtime();
                         // Check neither it nor its immediate neighbors have any available ports
@@ -726,9 +566,14 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
 
                             comm_start_time = MPI_Wtime();
                             IncidentDateTime(msg.incident_time);
-                            report_started = MPI_Wtime();
                             awaiting_base = true;
+                            message_start = MPI_Wtime();
                             MPI_Send(&msg, 1, report_type, global_size - 1, MSG_REPORT, world_comm);
+                            message_elapsed = MPI_Wtime() - message_start;
+                            message_metrics[MSG_REPORT].sent++;
+                            message_metrics[MSG_REPORT].send_bytes += (long long)(1) * report_bytes;
+                            message_metrics[MSG_REPORT].send_call_time += message_elapsed;
+                            message_metrics[MSG_REPORT].send_lifetime += message_elapsed;
                             comm_time += (MPI_Wtime() - comm_start_time);
                         } else {
                             LocalReferral(global_rank, coord, neigh_ports);
@@ -740,7 +585,13 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                 if (disabled && !awaiting_base && !ready_sent) {
                     int signal = 1;
                     comm_start_time = MPI_Wtime();
+                    message_start = MPI_Wtime();
                     MPI_Send(&signal,1,MPI_INT,global_size-1,MSG_READY,world_comm);
+                    message_elapsed = MPI_Wtime() - message_start;
+                    message_metrics[MSG_READY].sent++;
+                    message_metrics[MSG_READY].send_bytes += (long long)(1) * sizeof(int);
+                    message_metrics[MSG_READY].send_call_time += message_elapsed;
+                    message_metrics[MSG_READY].send_lifetime += message_elapsed;
                     comm_time += (MPI_Wtime() - comm_start_time);
                     ready_sent = true;
                 }
@@ -751,8 +602,20 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                     if (flag) {
                         int signal;
                         comm_start_time = MPI_Wtime();
+                        message_start = MPI_Wtime();
                         MPI_Recv(&signal,1,MPI_INT,global_size-1,MSG_TERMINATE,world_comm,MPI_STATUS_IGNORE);
+                        message_elapsed = MPI_Wtime() - message_start;
+                        message_metrics[MSG_TERMINATE].received++;
+                        message_metrics[MSG_TERMINATE].receive_bytes += (long long)(1) * sizeof(int);
+                        message_metrics[MSG_TERMINATE].receive_call_time += message_elapsed;
+                        message_metrics[MSG_TERMINATE].receive_lifetime += message_elapsed;
+                        message_start = MPI_Wtime();
                         MPI_Send(&signal,1,MPI_INT,global_size-1,MSG_TERMINATED,world_comm);
+                        message_elapsed = MPI_Wtime() - message_start;
+                        message_metrics[MSG_TERMINATED].sent++;
+                        message_metrics[MSG_TERMINATED].send_bytes += (long long)(1) * sizeof(int);
+                        message_metrics[MSG_TERMINATED].send_call_time += message_elapsed;
+                        message_metrics[MSG_TERMINATED].send_lifetime += message_elapsed;
                         comm_time += (MPI_Wtime() - comm_start_time);
                         break;
                     }
@@ -800,13 +663,20 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
 void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datatype report_type) {
     int global_size;
     int term_sig=1, ready_count=0, ack_count=0;
+    int report_bytes;
+    MPI_Type_size(report_type, &report_bytes);
     bool disabling=false, terminating=false;
     MPI_Comm_size(world_comm, &global_size);
     (void)comm;
     bool *ready_seen=calloc((size_t)(global_size-1),sizeof(bool));
     bool *ack_seen=calloc((size_t)(global_size-1),sizeof(bool));
     MPI_Request control_requests[2*(global_size-1)];
-    if (!ready_seen || !ack_seen) SimulationError("cannot allocate shutdown state");
+    double control_started[2*(global_size-1)];
+    if (!ready_seen || !ack_seen) {
+        fprintf(stderr, "EVCNS error: %s\n", "cannot allocate shutdown state");
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        exit(EXIT_FAILURE);
+    }
     for(int i=0;i<2*(global_size-1);i++) control_requests[i]=MPI_REQUEST_NULL;
 
     int grid_state[nrows][ncols];  // Global status matrix
@@ -833,12 +703,19 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
     MPI_Status probe_status;  // Keep track who are the sender and what tag of msg sender send
     MsgData report;
     double comm_time = 0.0, comm_start_time;
+    double message_start, message_elapsed;
     double comp_time = 0.0, comp_start_time;
 
     printf("[Base Station] Listening for reports...\n");
     fflush(stdout);
     fprintf(log_file, "----- SIMULATION STARTED -----\n");
-    fprintf(log_file,"Configuration: version=v1_task3 rows=%d cols=%d seed=%u predefined_period=%.6f seconds=%.3f\n",nrows,ncols,simulation_seed,predefined_period,simulation_seconds);
+    fprintf(log_file,
+            "Configuration: version=v1_task3 rows=%d cols=%d processes=%d ports=%d threads=%d "
+            "seconds=%.3f port_period=%.3f check_period=%.3f "
+            "predefined_period=%.6f busy_percent=%d\n",
+            nrows, ncols, global_size, NUM_PORTS, NUM_PORTS + 1,
+            simulation_seconds, port_period, check_period,
+            predefined_period, busy_percent);
     fflush(log_file);
 
     while(1) {
@@ -850,15 +727,35 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
             if (probe_status.MPI_TAG == MSG_READY || probe_status.MPI_TAG == MSG_TERMINATED) {
                 int signal, peer=probe_status.MPI_SOURCE;
                 comm_start_time = MPI_Wtime();
+                message_start = MPI_Wtime();
                 MPI_Recv(&signal,1,MPI_INT,peer,probe_status.MPI_TAG,world_comm,MPI_STATUS_IGNORE);
+                message_elapsed = MPI_Wtime() - message_start;
+                message_metrics[probe_status.MPI_TAG].received++;
+                message_metrics[probe_status.MPI_TAG].receive_bytes += (long long)(1) * sizeof(int);
+                message_metrics[probe_status.MPI_TAG].receive_call_time += message_elapsed;
+                message_metrics[probe_status.MPI_TAG].receive_lifetime += message_elapsed;
                 comm_time += (MPI_Wtime() - comm_start_time);
-                if (peer<0 || peer>=global_size-1) SimulationError("invalid shutdown sender");
+                if (peer<0 || peer>=global_size-1) {
+                    fprintf(stderr, "EVCNS error: %s\n", "invalid shutdown sender");
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                    exit(EXIT_FAILURE);
+                }
                 if (probe_status.MPI_TAG==MSG_READY && !ready_seen[peer]) { ready_seen[peer]=true; ready_count++; }
                 else if (probe_status.MPI_TAG==MSG_TERMINATED && !ack_seen[peer]) { ack_seen[peer]=true; ack_count++; }
-                else SimulationError("duplicate shutdown confirmation");
+                else {
+                    fprintf(stderr, "EVCNS error: %s\n", "duplicate shutdown confirmation");
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                    exit(EXIT_FAILURE);
+                }
             } else if (probe_status.MPI_TAG == MSG_REPORT) {  // If receive congestion message
                 comm_start_time = MPI_Wtime();
+                message_start = MPI_Wtime();
                 MPI_Recv(&report, 1, report_type, probe_status.MPI_SOURCE, MSG_REPORT, world_comm, MPI_STATUS_IGNORE);
+                message_elapsed = MPI_Wtime() - message_start;
+                message_metrics[MSG_REPORT].received++;
+                message_metrics[MSG_REPORT].receive_bytes += (long long)(1) * report_bytes;
+                message_metrics[MSG_REPORT].receive_call_time += message_elapsed;
+                message_metrics[MSG_REPORT].receive_lifetime += message_elapsed;
                 comm_time += (MPI_Wtime() - comm_start_time);
 
                 comp_start_time = MPI_Wtime();
@@ -977,9 +874,21 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
 
                 // Reply back to that congestion node for available ports
                 comm_start_time = MPI_Wtime();
+                message_start = MPI_Wtime();
                 MPI_Send(&found_count, 1, MPI_INT, probe_status.MPI_SOURCE, MSG_BS_REPLY, world_comm);
+                message_elapsed = MPI_Wtime() - message_start;
+                message_metrics[MSG_BS_REPLY].sent++;
+                message_metrics[MSG_BS_REPLY].send_bytes += (long long)(1) * sizeof(int);
+                message_metrics[MSG_BS_REPLY].send_call_time += message_elapsed;
+                message_metrics[MSG_BS_REPLY].send_lifetime += message_elapsed;
                 if (found_count > 0) {
+                    message_start = MPI_Wtime();
                     MPI_Send(best_coords, found_count * 2, MPI_INT, probe_status.MPI_SOURCE, MSG_BS_REPLY, world_comm);
+                    message_elapsed = MPI_Wtime() - message_start;
+                    message_metrics[MSG_BS_REPLY].sent++;
+                    message_metrics[MSG_BS_REPLY].send_bytes += (long long)(found_count * 2) * sizeof(int);
+                    message_metrics[MSG_BS_REPLY].send_call_time += message_elapsed;
+                    message_metrics[MSG_BS_REPLY].send_lifetime += message_elapsed;
                 }
                 comm_time += (MPI_Wtime() - comm_start_time);
                 
@@ -1021,19 +930,36 @@ void MasterIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Data
             disabling=true;
             printf("[Base Station] Time limit reached. Finishing active enquiries...\n");
             comm_start_time = MPI_Wtime();
-            for(int i=0;i<global_size-1;i++) MPI_Isend(&term_sig,1,MPI_INT,i,MSG_DISABLE,world_comm,&control_requests[i]);
+            for(int i=0;i<global_size-1;i++) {
+                control_started[i] = MPI_Wtime();
+                MPI_Isend(&term_sig,1,MPI_INT,i,MSG_DISABLE,world_comm,&control_requests[i]);
+                message_metrics[MSG_DISABLE].send_call_time += MPI_Wtime() - control_started[i];
+            }
             comm_time += (MPI_Wtime() - comm_start_time);
         }
         if (disabling && ready_count==global_size-1 && !terminating) {
             terminating=true;
             comm_start_time = MPI_Wtime();
-            for(int i=0;i<global_size-1;i++) MPI_Isend(&term_sig,1,MPI_INT,i,MSG_TERMINATE,world_comm,&control_requests[global_size-1+i]);
+            for(int i=0;i<global_size-1;i++) {
+                control_started[global_size-1+i] = MPI_Wtime();
+                MPI_Isend(&term_sig,1,MPI_INT,i,MSG_TERMINATE,world_comm,&control_requests[global_size-1+i]);
+                message_metrics[MSG_TERMINATE].send_call_time += MPI_Wtime() - control_started[global_size-1+i];
+            }
             comm_time += (MPI_Wtime() - comm_start_time);
         }
         if (terminating && ack_count==global_size-1) break;
     }
     comm_start_time = MPI_Wtime();
     MPI_Waitall(2*(global_size-1),control_requests,MPI_STATUSES_IGNORE);
+    double control_completed = MPI_Wtime();
+    message_metrics[MSG_DISABLE].sent += global_size - 1;
+    message_metrics[MSG_TERMINATE].sent += global_size - 1;
+    message_metrics[MSG_DISABLE].send_bytes += (long long)(global_size - 1) * sizeof(int);
+    message_metrics[MSG_TERMINATE].send_bytes += (long long)(global_size - 1) * sizeof(int);
+    for (int i = 0; i < global_size - 1; i++) {
+        message_metrics[MSG_DISABLE].send_lifetime += control_completed - control_started[i];
+        message_metrics[MSG_TERMINATE].send_lifetime += control_completed - control_started[global_size-1+i];
+    }
     comm_time += (MPI_Wtime() - comm_start_time);
     free(ready_seen);
     free(ack_seen);
@@ -1068,30 +994,39 @@ int main(int argc, char **argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    if(argc!=1 && argc!=3 && argc!=4) SimulationError("usage: evcns [rows cols [v1]]");
-    if(argc>=3) {
+    if(argc!=1 && argc!=3) {
+        fprintf(stderr, "EVCNS error: %s\n", "usage: evcns [rows cols]");
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        exit(EXIT_FAILURE);
+    }
+    if(argc==3) {
         nrows=(int)ParseInteger(argv[1],1,INT_MAX);
         ncols=(int)ParseInteger(argv[2],1,INT_MAX);
     }
-    // Optional v1 argument retained for compatibility with the Task 3 runner.
-    if(argc==4 && strcmp(argv[3],"v1")!=0) SimulationError("this executable supports V1 only");
-    if((long long)nrows*ncols!=(long long)size-1 || size-1>INT_MAX/2) SimulationError("rows*cols must equal process count minus one base");
-    simulation_seconds=ReadPeriod("EVCNS_SECONDS",30.0);
-    port_period=ReadPeriod("EVCNS_PORT_PERIOD",2.0);
-    check_period=ReadPeriod("EVCNS_CHECK_PERIOD",3.0);
-    predefined_period=ReadPeriod("EVCNS_PREDEFINED_PERIOD",1.5);
-    if(getenv("EVCNS_SEED")) simulation_seed=(unsigned)ParseInteger(getenv("EVCNS_SEED"),0,INT_MAX);
-    if(getenv("EVCNS_BUSY_PERCENT")) busy_percent=(int)ParseInteger(getenv("EVCNS_BUSY_PERCENT"),0,100);
-    (void)FixedFreePorts(0,size-1);
-    omp_set_dynamic(0);
-    if(rank==0) printf(">>> Running V1: %dx%d stations, seed=%u, revision=task3_20261020 <<<\n",nrows,ncols,simulation_seed);
-    if(rank==size-1) {
-        FILE *config=fopen("simulation_config.csv","w");
-        if(!config) SimulationError("cannot write simulation config");
-        fprintf(config,"version,rows,cols,processes,ports,threads,seconds,port_period,check_period,predefined_period,seed,busy_percent\n");
-        fprintf(config,"v1_task3,%d,%d,%d,%d,%d,%.9f,%.9f,%.9f,%.9f,%u,%d\n",nrows,ncols,size,NUM_PORTS,NUM_PORTS+1,simulation_seconds,port_period,check_period,predefined_period,simulation_seed,busy_percent);
-        fclose(config);
+    if((long long)nrows*ncols!=(long long)size-1 || size-1>INT_MAX/2) {
+        fprintf(stderr, "EVCNS error: %s\n", "rows*cols must equal process count minus one base");
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
+
+    // Only the report freshness window varies between period experiments.
+    const char *period_text = getenv("EVCNS_PREDEFINED_PERIOD");
+    if (period_text != NULL) {
+        char *end;
+        errno = 0;
+        double value = strtod(period_text, &end);
+        if (errno != 0 || end == period_text || *end ||
+            !(value > 0.0 && value < 86400.0)) {
+            fprintf(stderr, "EVCNS error: predefined period must be positive, finite and below 86400s\n");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+            exit(EXIT_FAILURE);
+        }
+        predefined_period = value;
+    }
+
+    if(getenv("EVCNS_BUSY_PERCENT")) busy_percent=(int)ParseInteger(getenv("EVCNS_BUSY_PERCENT"),0,100);
+
+    omp_set_dynamic(0);
 
     MPI_Datatype report_type;
     CreateDataType(&report_type);
