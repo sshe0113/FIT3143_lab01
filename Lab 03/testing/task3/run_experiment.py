@@ -24,10 +24,10 @@ def validate_run(folder,processes):
     return totals
 
 def main():
-    if len(sys.argv)!=9: raise SystemExit('Expected: suite case_id rows cols period output_dir replicates seconds')
-    suite,case_id,row_text,col_text,period,output,reps_text,seconds_text=sys.argv[1:]
+    if len(sys.argv)!=8: raise SystemExit('Expected: suite case_id rows cols period output_dir replicates')
+    suite,case_id,row_text,col_text,period,output,reps_text=sys.argv[1:]
     rows,cols,reps=int(row_text),int(col_text),int(reps_text)
-    seconds=float(seconds_text)
+    seconds=30.0  # Fixed in v1/evcns.c, together with port_period=2 and check_period=3.
     processes=rows*cols+1
     if int(os.environ.get('SLURM_NTASKS','0'))!=processes: raise SystemExit('Slurm process allocation does not match the grid')
     if reps*(seconds+15)+30>270: raise SystemExit('Requested runs exceed the safe five-minute budget')
@@ -46,11 +46,9 @@ def main():
     for replicate in range(1,reps+1):
         run_dir=job_dir/f'rep_{replicate:02d}'
         run_dir.mkdir()
-        seed=2026+replicate-1
-        env=dict(os.environ,EVCNS_SECONDS=str(seconds),EVCNS_PORT_PERIOD='2',EVCNS_CHECK_PERIOD='3',EVCNS_PREDEFINED_PERIOD=period,EVCNS_SEED=str(seed),EVCNS_BUSY_PERCENT='70')
-        env.pop('EVCNS_FREE_MAP',None)
-        command=['srun','--exact','--kill-on-bad-exit=1','--cpu-bind=cores','-n',str(processes),str(executable),str(rows),str(cols),'v1']
-        manifest={'suite':suite,'case_id':case_id,'rows':rows,'cols':cols,'stations':rows*cols,'processes':processes,'replicate':replicate,'seed':seed,'predefined_period':float(period),'seconds':seconds,'port_period':2.0,'check_period':3.0,'busy_percent':70,'cpus_per_task':int(os.environ.get('SLURM_CPUS_PER_TASK','0')),'slurm_job_id':job_id,'node_list':os.environ.get('SLURM_JOB_NODELIST',''),'mpi_version':mpi_version,'source_sha256':sha(snapshot/'evcns.c'),'command':command,'started_unix':time.time(),'status':'running'}
+        env=dict(os.environ,EVCNS_PREDEFINED_PERIOD=period,EVCNS_BUSY_PERCENT='70')
+        command=['srun','--exact','--kill-on-bad-exit=1','--cpu-bind=cores','-n',str(processes),str(executable),str(rows),str(cols)]
+        manifest={'suite':suite,'case_id':case_id,'rows':rows,'cols':cols,'stations':rows*cols,'processes':processes,'replicate':replicate,'predefined_period':float(period),'seconds':seconds,'port_period':2.0,'check_period':3.0,'busy_percent':70,'cpus_per_task':int(os.environ.get('SLURM_CPUS_PER_TASK','0')),'slurm_job_id':job_id,'node_list':os.environ.get('SLURM_JOB_NODELIST',''),'mpi_version':mpi_version,'source_sha256':sha(snapshot/'evcns.c'),'command':command,'started_unix':time.time(),'status':'running'}
         record=run_dir/'run_manifest.json'
         record.write_text(json.dumps(manifest,indent=2))
         try:

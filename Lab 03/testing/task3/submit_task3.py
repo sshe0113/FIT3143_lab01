@@ -24,11 +24,11 @@ def main():
     ap.add_argument('--max-nodes',type=int,help='Optional node limit, otherwise use available partition inventory')
     ap.add_argument('--max-new-jobs',type=int,default=5)
     ap.add_argument('--replicates',type=int,default=3)
-    ap.add_argument('--seconds',type=float,default=30)
     ap.add_argument('--run-id',default='v1_task3')
     args=ap.parse_args()
-    if min(args.cpus_per_task,args.replicates,args.max_new_jobs)<1 or args.seconds<=0: ap.error('Counts and duration must be positive.')
-    if args.replicates*(args.seconds+15)+30>270: ap.error('The requested repetitions leave too little margin within a five-minute job.')
+    seconds=30.0  # Fixed simulation duration in v1/evcns.c.
+    if min(args.cpus_per_task,args.replicates,args.max_new_jobs)<1: ap.error('Counts must be positive.')
+    if args.replicates*(seconds+15)+30>270: ap.error('The requested repetitions leave too little margin within a five-minute job.')
     if '/' in args.run_id or '\\' in args.run_id or args.run_id in ['.','..']: ap.error('run-id must be one directory name')
     folder=Path(__file__).resolve().parent
     if args.cpus_per_node is None or args.max_nodes is None:
@@ -56,7 +56,7 @@ def main():
             continue
         tasks=int(case['rows'])*int(case['cols'])+1
         job_nodes=math.ceil(tasks/per_node)
-        command=['sbatch','--parsable',f'--partition={args.partition}','--time=00:05:00',f'--chdir={folder}',f'--nodes={job_nodes}',f'--ntasks={tasks}',f'--ntasks-per-node={per_node}',f'--cpus-per-task={args.cpus_per_task}',f'--job-name={key}',f'--output={output}/{key}_%j.out',str(folder/'run_task3.slurm'),args.suite,key,case['rows'],case['cols'],case['predefined_period'],str(output),str(args.replicates),str(args.seconds)]
+        command=['sbatch','--parsable',f'--partition={args.partition}','--time=00:05:00',f'--chdir={folder}',f'--nodes={job_nodes}',f'--ntasks={tasks}',f'--ntasks-per-node={per_node}',f'--cpus-per-task={args.cpus_per_task}',f'--job-name={key}',f'--output={output}/{key}_%j.out',str(folder/'run_task3.slurm'),args.suite,key,case['rows'],case['cols'],case['predefined_period'],str(output),str(args.replicates)]
         print(' '.join(command))
         if args.submit:
             output.mkdir(parents=True,exist_ok=True)
