@@ -48,7 +48,7 @@
 //=============================================================================
 /* Controls and per-message timing required for Task 3. All point-to-point MPI calls below are
  * made by T6 (stations) or the one base thread.
- * CSV timings use each rank's own clock. Request lifetime is NOT one-way wire
+ * Timing differences use each rank's own clock. Request lifetime is NOT one-way wire
  * latency: preposted receives include idle waiting, and polling adds delay.
  */
 #define MSG_DISABLE 6
@@ -118,66 +118,53 @@ typedef struct {
 // One set of totals per message tag, local to this MPI process.
 static MessageMetric message_metrics[9];
 
-/**
- * @brief     Write the message metrics to a CSV file for analysis.
- * @param rows The number of rows in the grid.
- * @param cols The number of columns in the grid.
- * @param version The version of the simulation.
+/* Sum per-message statistics and append plain records to log.txt.
+ * The Slurm scripts convert these records to CSV; C does not write CSV files.
+ * All measurements use local MPI_Wtime differences before this reduction.
  */
-static void WriteMetrics(int rows,int cols,int version) {
-    int rank,size;
-    MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-    MPI_Comm_size(MPI_COMM_WORLD,&size);
-    const char *names[9]={"","C1_REQUEST","C2_RESPONSE","C3_REPORT","C4_BASE_REPLY",
-                         "C5_TERMINATE","DISABLE","READY","TERMINATED"};
-    char path[80];
-    snprintf(path,sizeof(path),"message_metrics_rank_%d.csv",rank);
-    FILE *file=fopen(path,"w");
-    if(!file) {
-        fprintf(stderr, "EVCNS error: %s\n", "cannot write message metrics");
-        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-        exit(EXIT_FAILURE);
+static void WriteMetrics(int rows, int cols, int version) {
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    long long counts[8][4], sums[8][4];
+    double times[8][4], total_times[8][4];
+    for (int tag = 1; tag <= 8; tag++) {
+        MessageMetric *m = &message_metrics[tag];
+        counts[tag-1][0] = m->sent;
+        counts[tag-1][1] = m->received;
+        counts[tag-1][2] = m->send_bytes;
+        counts[tag-1][3] = m->receive_bytes;
+        times[tag-1][0] = m->send_call_time;
+        times[tag-1][1] = m->receive_call_time;
+        times[tag-1][2] = m->send_lifetime;
+        times[tag-1][3] = m->receive_lifetime;
     }
-    fprintf(file,"version,rank,role,rows,cols,tag,message,sent,received,send_bytes,receive_bytes,send_call_time_seconds,receive_call_time_seconds,send_completion_seconds,receive_completion_seconds\n");
-    long long counts[8*4],sums[8*4];
-    for(int tag=1;tag<=8;++tag) {
-        MessageMetric *m=&message_metrics[tag];
-        fprintf(file,"v%d,%d,%s,%d,%d,%d,%s,%lld,%lld,%lld,%lld,%.9f,%.9f,%.9f,%.9f\n",
-                version,rank,rank==size-1?"base":"station",rows,cols,tag,names[tag],
-                m->sent,m->received,m->send_bytes,m->receive_bytes,
-                m->send_call_time,m->receive_call_time,m->send_lifetime,m->receive_lifetime);
-        counts[(tag-1)*4]=m->sent;
-        counts[(tag-1)*4+1]=m->received;
-        counts[(tag-1)*4+2]=m->send_bytes;
-        counts[(tag-1)*4+3]=m->receive_bytes;
-    }
-    fclose(file);
-    MPI_Reduce(counts,sums,8*4,MPI_LONG_LONG_INT,MPI_SUM,size-1,MPI_COMM_WORLD);
-    if(rank==size-1) {
-        file=fopen("message_metrics_global.csv","w");
-        FILE *log=fopen("log.txt","a");
-        if(!file||!log) {
-            fprintf(stderr, "EVCNS error: %s\n", "cannot write global metrics");
+    MPI_Reduce(counts, sums, 8*4, MPI_LONG_LONG_INT, MPI_SUM, size-1, MPI_COMM_WORLD);
+    MPI_Reduce(times, total_times, 8*4, MPI_DOUBLE, MPI_SUM, size-1, MPI_COMM_WORLD);
+    if (rank == size-1) {
+        FILE *log = fopen("log.txt", "a");
+        if (!log) {
+            fprintf(stderr, "EVCNS error: cannot append message statistics\n");
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
             exit(EXIT_FAILURE);
         }
-        fprintf(file,"version,rows,cols,tag,message,sent,received,send_bytes,receive_bytes\n");
-        long long total=0;
-        for(int tag=1;tag<=8;++tag) {
-            long long *p=&sums[(tag-1)*4];
-            if(p[0]!=p[1]||p[2]!=p[3]) {
-                fprintf(stderr, "EVCNS error: %s\n", "sent/received metrics do not balance");
+        long long total = 0;
+        fprintf(log, "METRIC_FIELDS version rows cols tag sent received send_bytes receive_bytes send_call_time receive_call_time send_lifetime receive_lifetime\n");
+        for (int tag = 1; tag <= 8; tag++) {
+            long long *p = sums[tag-1];
+            double *t = total_times[tag-1];
+            if (p[0] != p[1] || p[2] != p[3]) {
+                fprintf(stderr, "EVCNS error: sent/received statistics do not balance\n");
                 MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
                 exit(EXIT_FAILURE);
             }
-            total+=p[0];
-            fprintf(file,"v%d,%d,%d,%d,%s,%lld,%lld,%lld,%lld\n",version,rows,cols,tag,names[tag],p[0],p[1],p[2],p[3]);
+            fprintf(log, "METRIC %d %d %d %d %lld %lld %lld %lld %.9f %.9f %.9f %.9f\n",
+                    version, rows, cols, tag, p[0], p[1], p[2], p[3], t[0], t[1], t[2], t[3]);
+            total += p[0];
         }
-        fprintf(log,"Actual completed point-to-point messages: %lld (includes tags 1..8; excludes MPI collectives)\n",total);
-        fprintf(log,"Shutdown confirmed: READY=%lld TERMINATED=%lld\n",sums[6*4],sums[7*4]);
-        fclose(file);
+        fprintf(log, "Actual completed point-to-point messages: %lld (includes tags 1..8; excludes MPI collectives)\n", total);
+        fprintf(log, "Shutdown confirmed: READY=%lld TERMINATED=%lld\n", sums[6][0], sums[7][0]);
         fclose(log);
-        printf("[Validation] All point-to-point sends/receives balanced. READY=%lld TERMINATED=%lld\n",sums[6*4],sums[7*4]);
     }
 }
 
