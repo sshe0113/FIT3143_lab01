@@ -1,46 +1,27 @@
-Task 3a: communication scaling across 30 mesh grid sizes
+Task 3a - V2 mesh communication analysis
 
-Run:
-    python -m pip install matplotlib
-    python plot_task3a.py
+Keep mesh_messages.csv and plot_task3a.py together.
+Run: python plot_task3a.py
+Dependency: python -m pip install matplotlib
 
-Keep mesh_messages.csv and plot_task3a.py together. No absolute paths are used.
-VERSION = "v2" selects the implementation chosen for the main analysis.
-Changing VERSION to "v1" or "v3" produces a separate output directory.
+The script reads the original mesh_messages.csv and selects V2.
+It uses all 30 different mesh sizes and every V2 message type.
+No input data is edited and no additional CSV is generated.
 
-Data provenance:
-mesh_messages.csv is an unchanged copy from:
-task3_results.tar.gz/results_mesh_2WZEgl/mesh_messages.csv
-It includes all three versions. The script filters the selected version.
-One repetition per grid/version; there are no repeat error bars.
+output_v2 contains only two figures:
+01_application_call_times.png: C1 request, C2 response, C3 report, C4 base reply.
+02_shutdown_call_times.png: TERMINATE, DISABLE, READY, TERMINATED.
+Each figure has four panels; each panel has Send and Receive lines with 30 points.
+X = number of charging stations (rows x columns); the base is one extra process.
+Y = mean MPI send/receive call wall time per message, in microseconds.
+Log axes are labelled. Grid dimensions and all original fields remain in the CSV.
 
-Graphs:
-01_application_call_times.png: C1-C4 mean send/receive MPI call wall time.
-02_application_observed_completion.png: C1-C4 mean observed request lifetime.
-03_shutdown_call_times.png: DISABLE, READY, TERMINATE, TERMINATED MPI call times.
-04_shutdown_observed_completion.png: observed lifetimes for those control messages.
-V1 additionally produces two scheduling-message graphs.
+Method: mean_send_api_us = total recorded send-call seconds / sent count * 1e6.
+The receive mean is calculated similarly. A nonblocking call can return before
+communication completes; these plots measure MPI call time, not delivery latency.
+One run per size; random congestion and allocated node placement can affect times.
+Explain trends and outliers alongside the graphs; no repeat error bars are available.
+The CSV source is task3_results.tar.gz/results_mesh_2WZEgl/mesh_messages.csv.
 
-Each panel includes all 30 mesh sizes, sorted by number of charging stations.
-The grid is rectangular in some cases; the X axis is rows times columns.
-The base is one extra MPI process. Each point is a per-message mean within
-one simulation, not a mean across repeated simulations. Units are microseconds.
-Log axes are explicitly labelled. Missing timings are gaps, not zero samples.
-
-Timing interpretation:
-MPI call time measures the local time inside the recorded send/receive API.
-For a nonblocking operation, returning from the API does not mean completion.
-Observed completion measures time until the program detects completion; it
-includes waiting, scheduling, and polling intervals. Preposted receives also
-include time before a matching message arrives. Blocking call/completion values
-coincide in this instrumentation. V2 send completions are observed in batches,
-so their lifetimes can be longer than the actual individual transfer times.
-Neither metric is an isolated network delay, end-to-end delivery latency, or RTT.
-No such latency is reconstructed from these CSV fields.
-
-Simulation settings: 30 seconds, six ports/station, seven OpenMP threads/station,
-two allocated CPUs/process, predefined period 1.5 seconds. Grid sizes change
-both rank counts and placement; random congestion workloads also differ.
-Interpret spikes with these factors, message counts and the allocation logs.
-Do not infer a universal scaling law from one sample per size.
-
+VERSION at the top of the script defaults to v2. V3 also has two figures.
+V1 adds a scheduling figure for its QUERY_GRANT and QUERY_DONE messages.

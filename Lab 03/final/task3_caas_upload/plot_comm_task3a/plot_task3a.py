@@ -52,8 +52,7 @@ def load_data(folder):
             raise ValueError("Station/process count does not match the grid.")
         if r["sent"] != r["received"] or r["send_bytes"] != r["receive_bytes"]:
             raise ValueError("Unbalanced message counts or payload bytes.")
-        for field in ["mean_send_api_us", "mean_receive_api_us",
-                      "mean_observed_send_us", "mean_observed_receive_us"]:
+        for field in ["mean_send_api_us", "mean_receive_api_us"]:
             if r[field] and (not math.isfinite(float(r[field])) or float(r[field]) < 0):
                 raise ValueError(f"Invalid timing in {field}.")
     expected = {(rows, cols, tag) for rows, cols in shapes for tag in expected_tags}
@@ -65,15 +64,11 @@ def load_data(folder):
                                             int(r["rows"]), int(r["cols"])))
 
 
-def plot_messages(records, tags, title, metric, output, filename):
+def plot_messages(records, tags, title, output, filename):
     fig, axes = plt.subplots(2 if len(tags) > 2 else 1, 2, figsize=(12, 7.5 if len(tags) > 2 else 4.5),
                              squeeze=False)
-    if metric == "call":
-        send_field, receive_field = "mean_send_api_us", "mean_receive_api_us"
-        ylabel = "Mean MPI call time (us)"
-    else:
-        send_field, receive_field = "mean_observed_send_us", "mean_observed_receive_us"
-        ylabel = "Mean observed completion time (us)"
+    send_field, receive_field = "mean_send_api_us", "mean_receive_api_us"
+    ylabel = "Mean MPI call time (us)"
     for ax, tag in zip(axes.flat, tags):
         rows = [r for r in records if int(r["tag"]) == tag]
         stations = [int(r["stations"]) for r in rows]
@@ -109,19 +104,13 @@ def main():
     output = folder / f"output_{VERSION}"
     output.mkdir(exist_ok=True)
     plt.rcParams.update({"font.size": 10, "axes.titlesize": 12})
-    plot_messages(records, [1, 2, 3, 4], "Application MPI Call Times", "call", output,
+    plot_messages(records, [1, 2, 3, 4], "Application MPI Call Times", output,
                   "01_application_call_times.png")
-    plot_messages(records, [1, 2, 3, 4], "Application Observed Completion Times", "completion", output,
-                  "02_application_observed_completion.png")
-    plot_messages(records, [5, 6, 7, 8], "Shutdown MPI Call Times", "call", output,
-                  "03_shutdown_call_times.png")
-    plot_messages(records, [5, 6, 7, 8], "Shutdown Observed Completion Times", "completion", output,
-                  "04_shutdown_observed_completion.png")
+    plot_messages(records, [5, 6, 7, 8], "Shutdown MPI Call Times", output,
+                  "02_shutdown_call_times.png")
     if VERSION == "v1":
-        plot_messages(records, [9, 10], "Scheduling MPI Call Times", "call", output,
-                      "05_scheduling_call_times.png")
-        plot_messages(records, [9, 10], "Scheduling Observed Completion Times", "completion", output,
-                      "06_scheduling_observed_completion.png")
+        plot_messages(records, [9, 10], "Scheduling MPI Call Times", output,
+                      "03_scheduling_call_times.png")
     print(f"Generated {VERSION.upper()} graphs for all 30 mesh sizes and {len(records)} message records.")
     print(f"Output folder: {output}")
 
