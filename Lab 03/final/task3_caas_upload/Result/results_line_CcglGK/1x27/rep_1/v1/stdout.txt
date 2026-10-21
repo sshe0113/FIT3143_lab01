@@ -1,0 +1,158 @@
+[Node 0] Base recommends 1 node(s): (0,2) -> forward to EVs
+[Node 1] Base recommends 1 node(s): (0,3) -> forward to EVs
+[Node 2] Base recommends 1 node(s): (0,4) -> forward to EVs
+[Node 3] Refer EV to neighbour (0,4), free=3
+[Node 6] Refer EV to neighbour (0,7), free=4
+[Node 8] Refer EV to neighbour (0,7), free=4
+[Node 9] Base recommends 2 node(s): (0,7) (0,11) -> forward to EVs
+[Node 10] Base recommends 1 node(s): (0,12) -> forward to EVs
+[Node 11] Refer EV to neighbour (0,12), free=3
+[Node 13] Refer EV to neighbour (0,12), free=3
+[Node 14] Base recommends 2 node(s): (0,12) (0,16) -> forward to EVs
+[Node 15] Base recommends 1 node(s): (0,17) -> forward to EVs
+[Node 16] Refer EV to neighbour (0,17), free=3
+[Node 18] Refer EV to neighbour (0,17), free=3
+[Node 19] Base recommends 2 node(s): (0,17) (0,21) -> forward to EVs
+[Node 20] Refer EV to neighbour (0,21), free=3
+[Node 24] Refer EV to neighbour (0,23), free=3
+[Node 25] Refer EV to neighbour (0,26), free=3
+[Node 0] Refer EV to neighbour (0,1), free=3
+[Node 2] Refer EV to neighbour (0,1), free=4
+[Node 3] Base recommends 2 node(s): (0,1) (0,5) -> forward to EVs
+[Node 4] Base recommends 1 node(s): (0,6) -> forward to EVs
+[Node 5] Refer EV to neighbour (0,6), free=3
+[Node 8] Refer EV to neighbour (0,7), free=3
+[Node 9] Refer EV to neighbour (0,10), free=3
+[Node 11] Refer EV to neighbour (0,10), free=3
+[Node 12] Base recommends 2 node(s): (0,10) (0,14) -> forward to EVs
+[Node 13] Base recommends 1 node(s): (0,15) -> forward to EVs
+[Node 14] Base recommends 1 node(s): (0,16) -> forward to EVs
+[Node 15] Base recommends 1 node(s): (0,17) -> forward to EVs
+[Node 16] Base recommends 1 node(s): (0,18) -> forward to EVs
+[Node 17] Base recommends 1 node(s): (0,19) -> forward to EVs
+[Node 18] Base recommends 1 node(s): (0,20) -> forward to EVs
+[Node 19] Refer EV to neighbour (0,20), free=3
+[Node 22] Refer EV to neighbour (0,21), free=3
+[Node 23] Base recommends 2 node(s): (0,21) (0,25) -> forward to EVs
+[Node 24] Refer EV to neighbour (0,25), free=4
+[Node 26] Refer EV to neighbour (0,25), free=4
+[Node 0] Refer EV to neighbour (0,1), free=3
+[Node 2] Refer EV to neighbour (0,1), free=3
+[Node 4] Refer EV to neighbour (0,3), free=3
+[Node 7] Refer EV to neighbour (0,6), free=3
+[Node 8] Base recommends 2 node(s): (0,6) (0,10) -> forward to EVs
+[Node 9] Base recommends 1 node(s): (0,11) -> forward to EVs
+[Node 10] Base recommends 1 node(s): (0,12) -> forward to EVs
+[Node 11] Refer EV to neighbour (0,12), free=3
+[Node 13] Refer EV to neighbour (0,14), free=5
+[Node 17] Refer EV to neighbour (0,16), free=4
+[Node 20] Refer EV to neighbour (0,19), free=4
+[Node 22] Refer EV to neighbour (0,21), free=3
+[Node 26] Refer EV to neighbour (0,25), free=3
+[Node 2] Base recommends 2 node(s): (0,0) (0,4) -> forward to EVs
+[Node 3] Refer EV to neighbour (0,4), free=3
+[Node 5] Refer EV to neighbour (0,4), free=3
+[Node 6] Base recommends 2 node(s): (0,4) (0,8) -> forward to EVs
+[Node 7] Base recommends 1 node(s): (0,9) -> forward to EVs
+[Node 8] Refer EV to neighbour (0,9), free=3
+[Node 10] Refer EV to neighbour (0,9), free=3
+[Node 11] Base recommends 2 node(s): (0,9) (0,13) -> forward to EVs
+[Node 12] Refer EV to neighbour (0,13), free=3
+[Node 14] Refer EV to neighbour (0,13), free=3
+[Node 15] Base recommends 2 node(s): (0,13) (0,17) -> forward to EVs
+[Node 16] Refer EV to neighbour (0,17), free=3
+[Node 18] Refer EV to neighbour (0,17), free=3
+[Node 20] Refer EV to neighbour (0,19), free=3
+[Node 21] Base recommends 2 node(s): (0,19) (0,23) -> forward to EVs
+[Node 22] Refer EV to neighbour (0,23), free=3
+[Node 25] Refer EV to neighbour (0,24), free=4
+[Node 1] Refer EV to neighbour (0,0), free=4
+[Node 4] Refer EV to neighbour (0,3), free=3
+[Node 5] Base recommends 2 node(s): (0,3) (0,7) -> forward to EVs
+[Node 6] Refer EV to neighbour (0,7), free=4
+[Node 8] Refer EV to neighbour (0,7), free=4
+[Node 10] Refer EV to neighbour (0,9), free=3
+[Node 11] Refer EV to neighbour (0,12), free=3
+[Node 14] Refer EV to neighbour (0,15), free=5
+[Node 16] Refer EV to neighbour (0,15), free=5
+[Node 17] Base recommends 2 node(s): (0,15) (0,19) -> forward to EVs
+[Node 18] Base recommends 1 node(s): (0,20) -> forward to EVs
+[Node 19] Refer EV to neighbour (0,20), free=3
+[Node 21] Refer EV to neighbour (0,22), free=4
+[Node 23] Refer EV to neighbour (0,22), free=4
+[Node 24] Base recommends 2 node(s): (0,22) (0,26) -> forward to EVs
+[Node 25] Base recommends 1 node(s): (0,22) -> forward to EVs
+[Node 26] Base recommends 0 node(s): no available nodes nearby
+[Node 2] Base recommends 2 node(s): (0,0) (0,4) -> forward to EVs
+[Node 3] Base recommends 1 node(s): (0,5) -> forward to EVs
+[Node 4] Refer EV to neighbour (0,5), free=4
+[Node 6] Refer EV to neighbour (0,5), free=4
+[Node 8] Refer EV to neighbour (0,7), free=3
+[Node 9] Refer EV to neighbour (0,10), free=4
+[Node 12] Refer EV to neighbour (0,11), free=4
+[Node 13] Base recommends 2 node(s): (0,11) (0,15) -> forward to EVs
+[Node 14] Base recommends 1 node(s): (0,16) -> forward to EVs
+[Node 15] Base recommends 1 node(s): (0,17) -> forward to EVs
+[Node 16] Base recommends 1 node(s): (0,18) -> forward to EVs
+[Node 17] Base recommends 1 node(s): (0,19) -> forward to EVs
+[Node 18] Base recommends 1 node(s): (0,20) -> forward to EVs
+[Node 19] Refer EV to neighbour (0,20), free=3
+[Node 21] Refer EV to neighbour (0,20), free=3
+[Node 23] Refer EV to neighbour (0,22), free=3
+[Node 24] Base recommends 2 node(s): (0,22) (0,26) -> forward to EVs
+[Node 25] Base recommends 1 node(s): (0,22) -> forward to EVs
+[Node 26] Base recommends 0 node(s): no available nodes nearby
+[Node 1] Refer EV to neighbour (0,0), free=3
+[Node 2] Base recommends 2 node(s): (0,0) (0,4) -> forward to EVs
+[Node 3] Base recommends 1 node(s): (0,5) -> forward to EVs
+[Node 4] Base recommends 1 node(s): (0,6) -> forward to EVs
+[Node 5] Refer EV to neighbour (0,6), free=3
+[Node 7] Refer EV to neighbour (0,6), free=3
+[Node 8] Base recommends 2 node(s): (0,6) (0,10) -> forward to EVs
+[Node 9] Refer EV to neighbour (0,10), free=4
+[Node 11] Refer EV to neighbour (0,10), free=4
+[Node 12] Base recommends 2 node(s): (0,10) (0,14) -> forward to EVs
+[Node 13] Refer EV to neighbour (0,14), free=3
+[Node 15] Refer EV to neighbour (0,14), free=3
+[Node 17] Refer EV to neighbour (0,16), free=3
+[Node 18] Base recommends 2 node(s): (0,16) (0,20) -> forward to EVs
+[Node 19] Refer EV to neighbour (0,20), free=3
+[Node 22] Refer EV to neighbour (0,21), free=3
+[Node 23] Base recommends 2 node(s): (0,21) (0,25) -> forward to EVs
+[Node 24] Base recommends 1 node(s): (0,26) -> forward to EVs
+[Node 25] Refer EV to neighbour (0,26), free=3
+[Node 1] Refer EV to neighbour (0,0), free=4
+[Node 2] Refer EV to neighbour (0,1), free=3
+[Node 4] Refer EV to neighbour (0,3), free=3
+[Node 5] Base recommends 2 node(s): (0,3) (0,7) -> forward to EVs
+[Node 6] Base recommends 1 node(s): (0,8) -> forward to EVs
+[Node 7] Base recommends 1 node(s): (0,9) -> forward to EVs
+[Node 8] Base recommends 1 node(s): (0,10) -> forward to EVs
+[Node 9] Base recommends 1 node(s): (0,11) -> forward to EVs
+[Node 10] Refer EV to neighbour (0,11), free=3
+[Node 12] Refer EV to neighbour (0,11), free=3
+[Node 13] Base recommends 2 node(s): (0,11) (0,15) -> forward to EVs
+[Node 14] Base recommends 1 node(s): (0,16) -> forward to EVs
+[Node 15] Refer EV to neighbour (0,16), free=3
+[Node 18] Refer EV to neighbour (0,17), free=3
+[Node 19] Refer EV to neighbour (0,20), free=3
+[Node 24] Refer EV to neighbour (0,23), free=3
+[Node 25] Base recommends 1 node(s): (0,23) -> forward to EVs
+[Node 26] Base recommends 0 node(s): no available nodes nearby
+[Node 0] Refer EV to neighbour (0,1), free=4
+[Node 3] Refer EV to neighbour (0,2), free=3
+[Node 7] Refer EV to neighbour (0,6), free=4
+[Node 8] Base recommends 2 node(s): (0,6) (0,10) -> forward to EVs
+[Node 9] Base recommends 1 node(s): (0,11) -> forward to EVs
+[Node 10] Base recommends 1 node(s): (0,12) -> forward to EVs
+[Node 11] Base recommends 1 node(s): (0,13) -> forward to EVs
+[Node 12] Base recommends 1 node(s): (0,14) -> forward to EVs
+[Node 13] Refer EV to neighbour (0,14), free=4
+[Node 16] Refer EV to neighbour (0,15), free=3
+[Node 17] Refer EV to neighbour (0,18), free=3
+[Node 20] Refer EV to neighbour (0,19), free=3
+[Node 21] Refer EV to neighbour (0,22), free=3
+[Node 23] Refer EV to neighbour (0,22), free=3
+[Node 25] Refer EV to neighbour (0,24), free=3
+[Charging Nodes Average] Overall: 30.1059s | Comm: 0.0604s | Comp: 0.000083114s
+[Base Station] Overall: 30.1421s | Comm: 0.0220s | Comp: 0.000059279s

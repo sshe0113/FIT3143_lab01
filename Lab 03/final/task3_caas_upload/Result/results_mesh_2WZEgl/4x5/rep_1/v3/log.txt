@@ -1,0 +1,107 @@
+Configuration: version=v3 rows=4 cols=5 processes=21 ports=6 threads=7 seconds=30.000 port_period=2.000 check_period=3.000 predefined_period=1.500000 busy_percent=70
+Search: nearest Manhattan layer over the grid; unknown/expired availability is estimated as free.
+Neighbour payloads: request=4 bytes, reply=4 bytes; report Msg Size is their combined payload, excluding network headers.
+T:3.002262s | ALERT [1] | Incident: 2026-10-21T22:13:22+1100 | Rank: 1 Coord: (0,1) | Ports Free: 0 | Neighbor Free: [T:-2, B:1, L:1, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 4 (0,3) (1,0) (1,2) (2,1) | recent-neighbour shortcut=0
+T:3.002167s | ALERT [2] | Incident: 2026-10-21T22:13:22+1100 | Rank: 3 Coord: (0,3) | Ports Free: 1 | Neighbor Free: [T:-2, B:0, L:1, R:0] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (1,2) (1,4) (2,3) | recent-neighbour shortcut=0
+T:3.001635s | ALERT [3] | Incident: 2026-10-21T22:13:22+1100 | Rank: 7 Coord: (1,2) | Ports Free: 1 | Neighbor Free: [T:1, B:2, L:1, R:0] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 5 (1,0) (1,4) (2,1) (2,3) (3,2) | recent-neighbour shortcut=0
+T:3.002859s | ALERT [4] | Incident: 2026-10-21T22:13:22+1100 | Rank: 14 Coord: (2,4) | Ports Free: 2 | Neighbor Free: [T:2, B:1, L:2, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (3,3) | recent-neighbour shortcut=0
+T:3.001803s | ALERT [5] | Incident: 2026-10-21T22:13:22+1100 | Rank: 16 Coord: (3,1) | Ports Free: 1 | Neighbor Free: [T:1, B:-2, L:2, R:0] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (2,0) (3,3) | recent-neighbour shortcut=0
+T:3.003141s | ALERT [6] | Incident: 2026-10-21T22:13:22+1100 | Rank: 4 Coord: (0,4) | Ports Free: 0 | Neighbor Free: [T:-2, B:2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 1 (3,3) | recent-neighbour shortcut=0
+T:3.002162s | ALERT [7] | Incident: 2026-10-21T22:13:22+1100 | Rank: 6 Coord: (1,1) | Ports Free: 1 | Neighbor Free: [T:0, B:1, L:2, R:1] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 1 (2,0) | recent-neighbour shortcut=0
+T:3.001593s | ALERT [8] | Incident: 2026-10-21T22:13:22+1100 | Rank: 9 Coord: (1,4) | Ports Free: 2 | Neighbor Free: [T:0, B:2, L:0, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (3,3) | recent-neighbour shortcut=0
+T:3.003466s | ALERT [9] | Incident: 2026-10-21T22:13:22+1100 | Rank: 12 Coord: (2,2) | Ports Free: 2 | Neighbor Free: [T:1, B:0, L:1, R:2] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 2 (2,0) (3,3) | recent-neighbour shortcut=0
+T:3.002818s | ALERT [10] | Incident: 2026-10-21T22:13:22+1100 | Rank: 0 Coord: (0,0) | Ports Free: 1 | Neighbor Free: [T:-2, B:2, L:-2, R:0] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 1 (2,0) | recent-neighbour shortcut=0
+T:3.002517s | ALERT [11] | Incident: 2026-10-21T22:13:22+1100 | Rank: 2 Coord: (0,2) | Ports Free: 1 | Neighbor Free: [T:-2, B:1, L:0, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:3.003493s | ALERT [12] | Incident: 2026-10-21T22:13:22+1100 | Rank: 8 Coord: (1,3) | Ports Free: 0 | Neighbor Free: [T:1, B:2, L:1, R:2] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 1 (3,3) | recent-neighbour shortcut=0
+T:6.002666s | ALERT [13] | Incident: 2026-10-21T22:13:25+1100 | Rank: 19 Coord: (3,4) | Ports Free: 2 | Neighbor Free: [T:1, B:-2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (1,4) (2,3) (3,2) | recent-neighbour shortcut=0
+T:6.003504s | ALERT [14] | Incident: 2026-10-21T22:13:25+1100 | Rank: 14 Coord: (2,4) | Ports Free: 1 | Neighbor Free: [T:1, B:0, L:2, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (0,4) (1,3) (2,2) | recent-neighbour shortcut=0
+T:9.002933s | ALERT [15] | Incident: 2026-10-21T22:13:28+1100 | Rank: 15 Coord: (3,0) | Ports Free: 2 | Neighbor Free: [T:2, B:-2, L:-2, R:2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (1,0) (2,1) (3,2) | recent-neighbour shortcut=0
+T:9.003536s | ALERT [16] | Incident: 2026-10-21T22:13:28+1100 | Rank: 11 Coord: (2,1) | Ports Free: 1 | Neighbor Free: [T:2, B:2, L:2, R:1] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 5 (0,1) (1,0) (1,2) (2,3) (3,2) | recent-neighbour shortcut=0
+T:9.003639s | ALERT [17] | Incident: 2026-10-21T22:13:28+1100 | Rank: 1 Coord: (0,1) | Ports Free: 1 | Neighbor Free: [T:-2, B:2, L:0, R:0] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (0,3) (1,0) (1,2) | recent-neighbour shortcut=0
+T:9.004421s | ALERT [18] | Incident: 2026-10-21T22:13:28+1100 | Rank: 17 Coord: (3,2) | Ports Free: 2 | Neighbor Free: [T:1, B:-2, L:2, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (1,2) (2,3) (3,4) | recent-neighbour shortcut=0
+T:9.003442s | ALERT [19] | Incident: 2026-10-21T22:13:28+1100 | Rank: 3 Coord: (0,3) | Ports Free: 2 | Neighbor Free: [T:-2, B:2, L:0, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (1,2) (1,4) (2,3) | recent-neighbour shortcut=0
+T:9.002685s | ALERT [20] | Incident: 2026-10-21T22:13:28+1100 | Rank: 7 Coord: (1,2) | Ports Free: 1 | Neighbor Free: [T:0, B:1, L:2, R:2] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 3 (1,0) (1,4) (2,3) | recent-neighbour shortcut=0
+T:9.003464s | ALERT [21] | Incident: 2026-10-21T22:13:28+1100 | Rank: 4 Coord: (0,4) | Ports Free: 1 | Neighbor Free: [T:-2, B:1, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 1 (2,4) | recent-neighbour shortcut=0
+T:9.002758s | ALERT [22] | Incident: 2026-10-21T22:13:28+1100 | Rank: 16 Coord: (3,1) | Ports Free: 2 | Neighbor Free: [T:1, B:-2, L:2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:9.003907s | ALERT [23] | Incident: 2026-10-21T22:13:28+1100 | Rank: 2 Coord: (0,2) | Ports Free: 0 | Neighbor Free: [T:-2, B:1, L:1, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:9.003374s | ALERT [24] | Incident: 2026-10-21T22:13:28+1100 | Rank: 8 Coord: (1,3) | Ports Free: 2 | Neighbor Free: [T:2, B:1, L:1, R:1] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 1 (2,4) | recent-neighbour shortcut=0
+T:9.004511s | ALERT [25] | Incident: 2026-10-21T22:13:28+1100 | Rank: 12 Coord: (2,2) | Ports Free: 1 | Neighbor Free: [T:1, B:2, L:1, R:1] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 1 (2,4) | recent-neighbour shortcut=0
+T:9.003717s | ALERT [26] | Incident: 2026-10-21T22:13:28+1100 | Rank: 18 Coord: (3,3) | Ports Free: 1 | Neighbor Free: [T:1, B:-2, L:2, R:0] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (2,4) | recent-neighbour shortcut=0
+T:12.002858s | ALERT [27] | Incident: 2026-10-21T22:13:31+1100 | Rank: 9 Coord: (1,4) | Ports Free: 2 | Neighbor Free: [T:1, B:1, L:2, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 4 (0,3) (1,2) (2,3) (3,4) | recent-neighbour shortcut=0
+T:15.004976s | ALERT [28] | Incident: 2026-10-21T22:13:34+1100 | Rank: 7 Coord: (1,2) | Ports Free: 2 | Neighbor Free: [T:0, B:2, L:1, R:1] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 7 (0,1) (0,3) (1,0) (1,4) (2,1) (2,3) (3,2) | recent-neighbour shortcut=0
+T:18.005281s | ALERT [29] | Incident: 2026-10-21T22:13:37+1100 | Rank: 2 Coord: (0,2) | Ports Free: 1 | Neighbor Free: [T:-2, B:2, L:1, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 5 (0,0) (0,4) (1,1) (1,3) (2,2) | recent-neighbour shortcut=0
+T:18.006066s | ALERT [30] | Incident: 2026-10-21T22:13:37+1100 | Rank: 0 Coord: (0,0) | Ports Free: 2 | Neighbor Free: [T:-2, B:1, L:-2, R:1] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 2 (1,1) (2,0) | recent-neighbour shortcut=0
+T:21.005435s | ALERT [31] | Incident: 2026-10-21T22:13:40+1100 | Rank: 17 Coord: (3,2) | Ports Free: 2 | Neighbor Free: [T:2, B:-2, L:2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 5 (1,2) (2,1) (2,3) (3,0) (3,4) | recent-neighbour shortcut=0
+T:21.005764s | ALERT [32] | Incident: 2026-10-21T22:13:40+1100 | Rank: 1 Coord: (0,1) | Ports Free: 1 | Neighbor Free: [T:-2, B:1, L:2, R:0] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 4 (0,3) (1,0) (1,2) (2,1) | recent-neighbour shortcut=0
+T:21.005053s | ALERT [33] | Incident: 2026-10-21T22:13:40+1100 | Rank: 19 Coord: (3,4) | Ports Free: 2 | Neighbor Free: [T:0, B:-2, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 2 (1,4) (2,3) | recent-neighbour shortcut=0
+T:21.006669s | ALERT [34] | Incident: 2026-10-21T22:13:40+1100 | Rank: 3 Coord: (0,3) | Ports Free: 1 | Neighbor Free: [T:-2, B:2, L:0, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (1,2) (1,4) (2,3) | recent-neighbour shortcut=0
+T:21.004899s | ALERT [35] | Incident: 2026-10-21T22:13:40+1100 | Rank: 16 Coord: (3,1) | Ports Free: 2 | Neighbor Free: [T:0, B:-2, L:2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (2,0) | recent-neighbour shortcut=0
+T:21.004643s | ALERT [36] | Incident: 2026-10-21T22:13:40+1100 | Rank: 18 Coord: (3,3) | Ports Free: 2 | Neighbor Free: [T:2, B:-2, L:2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (1,2) (1,4) | recent-neighbour shortcut=0
+T:21.004644s | ALERT [37] | Incident: 2026-10-21T22:13:40+1100 | Rank: 0 Coord: (0,0) | Ports Free: 2 | Neighbor Free: [T:-2, B:2, L:-2, R:1] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 1 (2,0) | recent-neighbour shortcut=0
+T:21.006099s | ALERT [38] | Incident: 2026-10-21T22:13:40+1100 | Rank: 13 Coord: (2,3) | Ports Free: 2 | Neighbor Free: [T:2, B:2, L:2, R:0] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 2 (1,2) (1,4) | recent-neighbour shortcut=0
+T:24.006703s | ALERT [39] | Incident: 2026-10-21T22:13:43+1100 | Rank: 1 Coord: (0,1) | Ports Free: 2 | Neighbor Free: [T:-2, B:1, L:2, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 4 (0,3) (1,0) (1,2) (2,1) | recent-neighbour shortcut=0
+T:24.004452s | ALERT [40] | Incident: 2026-10-21T22:13:43+1100 | Rank: 9 Coord: (1,4) | Ports Free: 1 | Neighbor Free: [T:1, B:1, L:1, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 4 (0,3) (1,2) (2,3) (3,4) | recent-neighbour shortcut=0
+T:24.006656s | ALERT [41] | Incident: 2026-10-21T22:13:43+1100 | Rank: 3 Coord: (0,3) | Ports Free: 2 | Neighbor Free: [T:-2, B:1, L:1, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (1,2) (2,3) | recent-neighbour shortcut=0
+T:27.007030s | ALERT [42] | Incident: 2026-10-21T22:13:46+1100 | Rank: 1 Coord: (0,1) | Ports Free: 0 | Neighbor Free: [T:-2, B:1, L:2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 4 (0,3) (1,0) (1,2) (2,1) | recent-neighbour shortcut=0
+T:27.006306s | ALERT [43] | Incident: 2026-10-21T22:13:46+1100 | Rank: 2 Coord: (0,2) | Ports Free: 2 | Neighbor Free: [T:-2, B:2, L:0, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (0,4) (1,3) (2,2) | recent-neighbour shortcut=0
+T:27.007940s | ALERT [44] | Incident: 2026-10-21T22:13:46+1100 | Rank: 3 Coord: (0,3) | Ports Free: 1 | Neighbor Free: [T:-2, B:1, L:2, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (1,4) (2,3) | recent-neighbour shortcut=0
+T:30.005761s | ALERT [45] | Incident: 2026-10-21T22:13:49+1100 | Rank: 15 Coord: (3,0) | Ports Free: 0 | Neighbor Free: [T:1, B:-2, L:-2, R:2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (1,0) (2,1) (3,2) | recent-neighbour shortcut=0
+Total Simulation Time: 30.101647 seconds
+Total Congestion Alerts: 45
+Timing: local MPI function time and observed completion time; includes waiting/polling, not isolated one-way network latency.
+METRIC_FIELDS version rows cols tag sent received send_bytes receive_bytes send_call_time receive_call_time send_lifetime receive_lifetime
+METRIC 3 4 5 1 417 417 1668 1668 0.003071670 0.000352400 0.458735344 0.000480499
+METRIC 3 4 5 2 417 417 1668 1668 0.002560339 0.000314569 0.454079885 0.520759691
+METRIC 3 4 5 3 45 45 3600 3600 0.000897764 0.000029095 0.016209593 0.000049199
+METRIC 3 4 5 4 87 87 1076 1076 0.000815602 0.000024841 0.101031617 0.075786093
+METRIC 3 4 5 5 20 20 80 80 0.000123181 0.000011752 0.022534575 0.000017890
+METRIC 3 4 5 6 20 20 80 80 0.000313331 0.000012628 0.100922631 0.000020356
+METRIC 3 4 5 7 20 20 80 80 0.000212501 0.000004596 0.000217153 0.000006990
+METRIC 3 4 5 8 20 20 80 80 0.000262937 0.000010812 0.000281775 0.000015952
+Total Communication Events: 1046 (completed point-to-point messages; collectives excluded)
+Shutdown confirmed: READY=20 TERMINATED=20

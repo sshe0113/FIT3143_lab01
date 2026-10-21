@@ -1,0 +1,6 @@
+suite=line
+repetitions=1
+period=1.5
+partition=defq
+cpus_per_task=2
+omp_threads_per_station=7

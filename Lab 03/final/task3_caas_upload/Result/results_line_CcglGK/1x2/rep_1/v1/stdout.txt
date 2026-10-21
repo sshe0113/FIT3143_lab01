@@ -1,0 +1,15 @@
+[Node 1] Refer EV to neighbour (0,0), free=3
+[Node 0] Base recommends 0 node(s): no available nodes nearby
+[Node 1] Base recommends 0 node(s): no available nodes nearby
+[Node 1] Refer EV to neighbour (0,0), free=3
+[Node 1] Base recommends 0 node(s): no available nodes nearby
+[Node 0] Refer EV to neighbour (0,1), free=4
+[Node 0] Refer EV to neighbour (0,1), free=3
+[Node 0] Base recommends 0 node(s): no available nodes nearby
+[Node 1] Base recommends 0 node(s): no available nodes nearby
+[Node 0] Base recommends 0 node(s): no available nodes nearby
+[Node 1] Base recommends 0 node(s): no available nodes nearby
+[Node 0] Base recommends 0 node(s): no available nodes nearby
+[Node 1] Base recommends 0 node(s): no available nodes nearby
+[Charging Nodes Average] Overall: 30.0127s | Comm: 0.0460s | Comp: 0.000162698s
+[Base Station] Overall: 30.0224s | Comm: 0.0001s | Comp: 0.000006442s

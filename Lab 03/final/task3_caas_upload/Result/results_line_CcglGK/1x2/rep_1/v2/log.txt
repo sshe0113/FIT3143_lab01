@@ -1,0 +1,41 @@
+Configuration: version=v2 rows=1 cols=2 processes=3 ports=6 threads=7 seconds=30.000 port_period=2.000 check_period=3.000 predefined_period=1.500000 busy_percent=70
+Search: nearest Manhattan layer over the grid; unknown/expired availability is estimated as free.
+Neighbour payloads: request=4 bytes, reply=4 bytes; report Msg Size is their combined payload, excluding network headers.
+T:3.021240s | ALERT [1] | Incident: 2026-10-21T21:53:38+1100 | Rank: 1 Coord: (0,1) | Ports Free: 2 | Neighbor Free: [T:-2, B:-2, L:1, R:-2] | Msgs: 2 | Msg Size: 8 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=0
+T:3.005384s | ALERT [2] | Incident: 2026-10-21T21:53:38+1100 | Rank: 0 Coord: (0,0) | Ports Free: 1 | Neighbor Free: [T:-2, B:-2, L:-2, R:2] | Msgs: 2 | Msg Size: 8 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:6.024634s | ALERT [3] | Incident: 2026-10-21T21:53:41+1100 | Rank: 1 Coord: (0,1) | Ports Free: 2 | Neighbor Free: [T:-2, B:-2, L:2, R:-2] | Msgs: 2 | Msg Size: 8 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=0
+T:6.009784s | ALERT [4] | Incident: 2026-10-21T21:53:41+1100 | Rank: 0 Coord: (0,0) | Ports Free: 2 | Neighbor Free: [T:-2, B:-2, L:-2, R:2] | Msgs: 2 | Msg Size: 8 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:9.028055s | ALERT [5] | Incident: 2026-10-21T21:53:44+1100 | Rank: 1 Coord: (0,1) | Ports Free: 2 | Neighbor Free: [T:-2, B:-2, L:1, R:-2] | Msgs: 2 | Msg Size: 8 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=0
+T:9.013207s | ALERT [6] | Incident: 2026-10-21T21:53:44+1100 | Rank: 0 Coord: (0,0) | Ports Free: 1 | Neighbor Free: [T:-2, B:-2, L:-2, R:2] | Msgs: 2 | Msg Size: 8 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:12.031334s | ALERT [7] | Incident: 2026-10-21T21:53:47+1100 | Rank: 1 Coord: (0,1) | Ports Free: 1 | Neighbor Free: [T:-2, B:-2, L:2, R:-2] | Msgs: 2 | Msg Size: 8 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=0
+T:12.016487s | ALERT [8] | Incident: 2026-10-21T21:53:47+1100 | Rank: 0 Coord: (0,0) | Ports Free: 2 | Neighbor Free: [T:-2, B:-2, L:-2, R:1] | Msgs: 2 | Msg Size: 8 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:18.019804s | ALERT [9] | Incident: 2026-10-21T21:53:53+1100 | Rank: 0 Coord: (0,0) | Ports Free: 1 | Neighbor Free: [T:-2, B:-2, L:-2, R:0] | Msgs: 2 | Msg Size: 8 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=0
+T:18.038927s | ALERT [10] | Incident: 2026-10-21T21:53:53+1100 | Rank: 1 Coord: (0,1) | Ports Free: 0 | Neighbor Free: [T:-2, B:-2, L:1, R:-2] | Msgs: 2 | Msg Size: 8 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:21.041298s | ALERT [11] | Incident: 2026-10-21T21:53:56+1100 | Rank: 1 Coord: (0,1) | Ports Free: 2 | Neighbor Free: [T:-2, B:-2, L:2, R:-2] | Msgs: 2 | Msg Size: 8 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=0
+T:21.023254s | ALERT [12] | Incident: 2026-10-21T21:53:56+1100 | Rank: 0 Coord: (0,0) | Ports Free: 2 | Neighbor Free: [T:-2, B:-2, L:-2, R:2] | Msgs: 2 | Msg Size: 8 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+Total Simulation Time: 30.016273 seconds
+Total Congestion Alerts: 12
+Timing: local MPI function time and observed completion time; includes waiting/polling, not isolated one-way network latency.
+METRIC_FIELDS version rows cols tag sent received send_bytes receive_bytes send_call_time receive_call_time send_lifetime receive_lifetime
+METRIC 2 1 2 1 15 15 60 60 0.000025476 0.000016582 0.048014959 0.000016582
+METRIC 2 1 2 2 15 15 60 60 0.000011630 0.000010181 0.000011630 0.047970337
+METRIC 2 1 2 3 12 12 960 960 0.000010940 0.000007806 0.000010940 0.000007806
+METRIC 2 1 2 4 12 12 48 48 0.000010243 0.000003756 0.000010243 0.000003756
+METRIC 2 1 2 5 2 2 8 8 0.000000781 0.000000822 0.022341339 0.000000822
+METRIC 2 1 2 6 2 2 8 8 0.000007994 0.000003286 0.030890727 0.000003286
+METRIC 2 1 2 7 2 2 8 8 0.000002534 0.000001121 0.000002534 0.000001121
+METRIC 2 1 2 8 2 2 8 8 0.000001012 0.000001904 0.000001012 0.000001904
+Total Communication Events: 62 (completed point-to-point messages; collectives excluded)
+Shutdown confirmed: READY=2 TERMINATED=2

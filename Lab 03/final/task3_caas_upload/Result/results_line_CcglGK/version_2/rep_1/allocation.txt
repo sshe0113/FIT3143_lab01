@@ -1,0 +1,28 @@
+JobId=197413 ArrayJobId=197223 ArrayTaskId=2 ArrayTaskThrottle=1 JobName=line_all_versions
+   UserId=nobody(882509) GroupId=nobody(1121) MCS_label=N/A
+   Priority=4294760653 Nice=0 Account=(null) QOS=normal
+   JobState=RUNNING Reason=None Dependency=(null)
+   Requeue=1 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:00:00 TimeLimit=00:20:00 TimeMin=N/A
+   SubmitTime=2026-10-21T19:55:29 EligibleTime=2026-10-21T21:53:34
+   AccrueTime=2026-10-21T19:55:30
+   StartTime=2026-10-21T21:53:34 EndTime=2026-10-21T22:13:34 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-21T21:53:34 Scheduler=Main
+   Partition=defq AllocNode:Sid=student-caas-headnode:3638258
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=student-caas-n[10-13]
+   BatchHost=student-caas-n10
+   NumNodes=4 NumCPUs=64 NumTasks=32 CPUs/Task=2 ReqB:S:C:T=0:0:*:*
+   TRES=cpu=64,mem=6400M,node=4,billing=64
+   Socks/Node=* NtasksPerN:B:S:C=8:0:*:* CoreSpec=*
+   MinCPUsNode=16 MinMemoryCPU=100M MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) Network=(null)
+   Command=/srv/home/sshe0113/lab03/task3_caas_upload/results_line_CcglGK/run_task3b.slurm --batch /srv/home/sshe0113/lab03/task3_caas_upload/results_line_CcglGK 1 1.5 2 8
+   WorkDir=/srv/home/sshe0113/lab03/task3_caas_upload/results_line_CcglGK
+   StdErr=/srv/home/sshe0113/lab03/task3_caas_upload/results_line_CcglGK/line_197223_2.out
+   StdIn=/dev/null
+   StdOut=/srv/home/sshe0113/lab03/task3_caas_upload/results_line_CcglGK/line_197223_2.out
+   Power=
+   
+

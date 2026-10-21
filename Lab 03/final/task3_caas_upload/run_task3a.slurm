@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=task3a_mesh
 #SBATCH --partition=defq
-#SBATCH --time=00:05:00
-#SBATCH --cpus-per-task=7
+#SBATCH --time=00:20:00
+#SBATCH --cpus-per-task=2
 #SBATCH --output=%x-%A_%a.out
 set -euo pipefail
 
@@ -11,8 +11,8 @@ set -euo pipefail
 # Launch from the folder containing those files:
 #   bash run_task3a.slurm
 # Or: sbatch run_task3a.slurm (submit from that folder).
-# Optional: REPETITIONS=3 PARTITION=defq bash run_task3a.slurm
-# Each grid gets an array of repeats. Each repeat runs V1/V2/V3 sequentially.
+# Optional: CPUS_PER_TASK=2 REPETITIONS=3 PARTITION=defq bash run_task3a.slurm
+# One array covers all versions/repeats. Each element loops all 30 grid sizes for one version.
 
 suite=mesh
 script_name=run_task3a.slurm
@@ -21,7 +21,7 @@ run_header='version,suite,rows,cols,stations,processes,replicate,predefined_peri
 
 sizes=(2x2 2x3 2x4 3x3 2x5 3x4 2x7 3x5 4x4 3x6 4x5 3x7 2x11 4x6 5x5 2x13 3x9 4x7 5x6 4x8 3x11 2x17 5x7 6x6 2x19 3x13 5x8 6x7 4x11 5x9)
 
-# Run only after all case arrays finish (array indices need not execute in order).
+# Run only after all main-array elements finish (indices need not execute in order).
 summarise_batch() {
     local batch=$1 repeats=$2 count records
     count=$(awk 'END {print NR-1}' "$batch/${suite}_runs.csv")
@@ -66,7 +66,7 @@ if [[ "${1:-}" == --summary ]]; then
     exit 0
 fi
 
-if [[ "${1:-}" != --worker ]]; then
+if [[ "${1:-}" != --batch ]]; then
     [[ $# -eq 0 ]] || { echo "Usage: bash $script_name" >&2; exit 2; }
     if [[ -n "${SLURM_JOB_ID:-}" ]]; then
         source_dir=${SLURM_SUBMIT_DIR:?}
@@ -78,6 +78,8 @@ if [[ "${1:-}" != --worker ]]; then
     done
     repeats=${REPETITIONS:-3}
     [[ "$repeats" =~ ^[1-9][0-9]*$ ]] || { echo 'REPETITIONS must be positive' >&2; exit 1; }
+    cpus_per_task=${CPUS_PER_TASK:-2}
+    [[ "$cpus_per_task" =~ ^[1-9][0-9]*$ ]] || { echo 'CPUS_PER_TASK must be positive' >&2; exit 1; }
     period=${EVCNS_PRED_PERIOD:-1.5}
     awk -v x="$period" 'BEGIN {exit !(x ~ /^[0-9]+([.][0-9]+)?$/ && x+0>0)}' || { echo 'Use a positive decimal EVCNS_PRED_PERIOD' >&2; exit 1; }
     partition=${PARTITION:-defq}
@@ -92,7 +94,7 @@ if [[ "${1:-}" != --worker ]]; then
         seen_nodes[$node]=1
         case "$state" in *down*|*drain*|*fail*|*maint*|*unk*) continue;; esac
         [[ "$cores" =~ ^[0-9]+$ ]] || { echo "Invalid CPU count for $node" >&2; exit 1; }
-        slots=$((cores/7))
+        slots=$((cores/cpus_per_task))
         ((slots>0)) || continue
         if ((slots<per_node)); then per_node=$slots; fi
         node_count=$((node_count+1))
@@ -103,8 +105,13 @@ if [[ "${1:-}" != --worker ]]; then
         if ((tasks>max_tasks)); then max_tasks=$tasks; fi
     done
     if ((node_count==0 || max_tasks>node_count*per_node)); then
-        echo "Insufficient eligible capacity for all 30 $suite sizes with 7 CPUs/task; no jobs submitted." >&2
+        echo "Insufficient eligible capacity for all 30 $suite sizes with $cpus_per_task CPUs/task; no jobs submitted." >&2
         exit 1
+    fi
+
+    echo "Eligible capacity: $node_count nodes, up to $per_node MPI tasks/node, $cpus_per_task CPUs/task."
+    if ((cpus_per_task<7)); then
+        echo "Each station keeps 7 OpenMP threads sharing $cpus_per_task allocated CPUs; use the same setting for V1/V2/V3."
     fi
 
     # Exact source copies freeze this batch; originals are never edited.
@@ -114,65 +121,77 @@ if [[ "${1:-}" != --worker ]]; then
     (cd "$batch"; sha256sum evcns_v1.c evcns_v2.c evcns_v3.c utils.c utils.h > source_sha256.txt)
     printf '%s\n' "$metric_header" > "$batch/${suite}_messages.csv"
     printf '%s\n' "$run_header" > "$batch/${suite}_runs.csv"
-    printf 'suite=%s\nrepetitions=%s\nperiod=%s\npartition=%s\ncpus_per_task=7\n' "$suite" "$repeats" "$period" "$partition" > "$batch/settings.txt"
-    previous=''
-    index=0
-    for shape in "${sizes[@]}"; do
-        rows=${shape%x*}; cols=${shape#*x}; tasks=$((rows*cols+1))
-        nodes=$(((tasks+per_node-1)/per_node))
-        index=$((index+1))
-        options=(--parsable --partition="$partition" --chdir="$batch" --nodes="$nodes" --ntasks="$tasks"
-                 --ntasks-per-node="$per_node" --cpus-per-task=7 --array="1-${repeats}%1"
-                 --job-name="${suite}_${shape}" --output="$batch/${shape}_%A_%a.out")
-        if [[ -n "$previous" ]]; then options+=(--dependency="afterany:$previous"); fi
-        raw=$(sbatch "${options[@]}" "$batch/$script_name" --worker "$rows" "$cols" "$batch" "$index" "$repeats" "$period")
-        previous=${raw%%;*}
-        [[ "$previous" =~ ^[0-9]+$ ]] || { echo "Unexpected sbatch output: $raw" >&2; exit 1; }
-        printf '%s,%s,%s\n' "$index" "$shape" "$previous" >> "$batch/jobs.csv"
-        echo "$suite $index/30: $shape, array job $previous, $repeats repeats of V1/V2/V3"
-    done
-    # A separate lightweight job checks coverage after the ENTIRE final array.
+    printf 'suite=%s\nrepetitions=%s\nperiod=%s\npartition=%s\ncpus_per_task=%s\nomp_threads_per_station=7\n' "$suite" "$repeats" "$period" "$partition" "$cpus_per_task" > "$batch/settings.txt"
+    # One main array ID: V1/V2/V3 each run all 30 sizes, one repeat per element.
+    # Each element needs ~15 minutes of simulation, so reserve the permitted 20 minutes.
+    nodes=$(((max_tasks+per_node-1)/per_node))
+    elements=$((3*repeats))
+    printf 'suite=%s versions=V1,V2,V3 sizes=30 repeats=%s CPUs/task=%s OpenMP_threads/station=7\n' "$suite" "$repeats" "$cpus_per_task" > "$batch/all_${suite}.log"
+    raw=$(sbatch --parsable --partition="$partition" --chdir="$batch" --nodes="$nodes" --ntasks="$max_tasks" \
+        --ntasks-per-node="$per_node" --cpus-per-task="$cpus_per_task" --time=00:20:00 --array="1-${elements}%1" \
+        --job-name="${suite}_all_versions" --output="$batch/${suite}_%A_%a.out" \
+        "$batch/$script_name" --batch "$batch" "$repeats" "$period" "$cpus_per_task" "$per_node")
+    previous=${raw%%;*}
+    [[ "$previous" =~ ^[0-9]+$ ]] || { echo "Unexpected sbatch result: $raw" >&2; exit 1; }
+    printf 'array,%s\n' "$previous" >> "$batch/jobs.csv"
+    echo "Submitted array $previous: $elements elements; each runs one version across all 30 $suite sizes."
+    # A lightweight summary job checks coverage after the ENTIRE main array.
     final_raw=$(sbatch --parsable --partition="$partition" --chdir="$batch" --nodes=1 --ntasks=1 \
         --ntasks-per-node=1 --cpus-per-task=1 --dependency="afterany:$previous" \
         --job-name="${suite}_summary" --output="$batch/summary_%j.out" \
         "$batch/$script_name" --summary "$batch" "$repeats")
     printf 'summary,%s\n' "$final_raw" >> "$batch/jobs.csv"
     echo "Results: $batch"
-    echo 'Cases and repetitions run sequentially. Each repeat has its own five-minute allocation (~90 seconds simulation time).'
+    echo 'Array elements run sequentially. Each element has a 20-minute limit (~15 minutes simulation).'
     echo 'Inspect COMPLETE.txt, raw logs and CSVs after all arrays finish. Scheduler/QOS limits may constrain submission.'
     exit 0
 fi
 
-# Worker arguments are supplied only by this script's submission mode.
-[[ $# -eq 7 ]] || { echo 'Invalid worker arguments' >&2; exit 2; }
-rows=$2; cols=$3; batch=$4; case_number=$5; repeats=$6; period=$7
-rep=${SLURM_ARRAY_TASK_ID:?}
-stations=$((rows*cols)); tasks=$((stations+1))
-[[ "${SLURM_NTASKS:-0}" -eq "$tasks" && "${SLURM_CPUS_PER_TASK:-0}" -eq 7 ]] || { echo 'Incorrect MPI/CPU allocation' >&2; exit 1; }
-job_dir="$batch/${rows}x${cols}/rep_$rep"
+# Array element: one version and one repetition, looping all 30 sizes.
+[[ $# -eq 6 ]] || { echo 'Invalid batch arguments' >&2; exit 2; }
+batch=$2; repeats=$3; period=$4; cpus_per_task=$5; per_node=$6
+element=${SLURM_ARRAY_TASK_ID:?}
+rep=$(((element-1)/3+1))
+offset=$(((element-1)%3))
+version=$(((rep-1+offset)%3+1))
+((rep>=1 && rep<=repeats)) || { echo 'Invalid repetition index' >&2; exit 1; }
+[[ "${SLURM_CPUS_PER_TASK:-0}" -eq "$cpus_per_task" ]] || { echo 'Incorrect CPU allocation' >&2; exit 1; }
+job_dir="$batch/version_$version/rep_$rep"
 mkdir -p "$(dirname -- "$job_dir")"
-mkdir "$job_dir"  # Never overwrite an earlier repetition.
+mkdir "$job_dir"
 trap 'code=$?; printf "FAILED exit=%s version=%s\n" "$code" "${version:-setup}" > "$job_dir/FAILED.txt"; exit "$code"' ERR
 if [[ -n "${EVCNS_MPI_MODULE-openmpi/4.1.5-gcc-11.2.0-ux65npg}" ]]; then
     module load "${EVCNS_MPI_MODULE-openmpi/4.1.5-gcc-11.2.0-ux65npg}"
 fi
+# Seven application threads are required by the unchanged C code, independently of allocated CPUs.
 export OMP_NUM_THREADS=7 OMP_DYNAMIC=FALSE OMP_PLACES=cores OMP_PROC_BIND=close
 export EVCNS_PRED_PERIOD=$period
 mpicc --version > "$job_dir/compiler.txt"
 mpirun --version > "$job_dir/mpi.txt"
 scontrol show job "$SLURM_JOB_ID" > "$job_dir/allocation.txt"
-for version in 1 2 3; do
-    mpicc -std=gnu11 -O2 -Wall -Wextra -fopenmp "$batch/evcns_v${version}.c" "$batch/utils.c" -o "$job_dir/evcns_v${version}" >> "$job_dir/build.txt" 2>&1
-done
+mpicc -std=gnu11 -O2 -Wall -Wextra -fopenmp "$batch/evcns_v${version}.c" "$batch/utils.c" -o "$job_dir/evcns_v${version}" > "$job_dir/build.txt" 2>&1
 
-# Rotate execution order across repeats, on the same allocation.
-for offset in 0 1 2; do
-    version=$(((rep-1+offset)%3+1))
-    run_dir="$job_dir/v$version"
+for shape in "${sizes[@]}"; do
+    rows=${shape%x*}; cols=${shape#*x}
+    stations=$((rows*cols)); tasks=$((stations+1))
+    ((tasks<=SLURM_NTASKS)) || { echo 'Insufficient MPI allocation' >&2; exit 1; }
+    step_nodes=$(((tasks+per_node-1)/per_node))
+    step_per_node=$per_node
+    if ((tasks<step_per_node)); then step_per_node=$tasks; fi
+    run_dir="$batch/${rows}x${cols}/rep_$rep/v$version"
+    mkdir -p "$(dirname -- "$run_dir")"
     mkdir "$run_dir"
     cd "$run_dir"
-    # Successful shutdown is driven by the C program, never an external timeout/kill.
-    srun --exact --kill-on-bad-exit=1 --cpu-bind=cores -n "$tasks" "$job_dir/evcns_v${version}" "$rows" "$cols" > stdout.txt 2> stderr.txt
+    printf '\n===== V%s | Grid %sx%s | Repeat %s | CPUs/task %s =====\n' "$version" "$rows" "$cols" "$rep" "$cpus_per_task" >> "$batch/all_${suite}.log"
+    # The application still launches exactly one process per station plus one base.
+    srun --exact --kill-on-bad-exit=1 --cpu-bind=cores --nodes="$step_nodes" --ntasks-per-node="$step_per_node" --cpus-per-task="$cpus_per_task" -n "$tasks" "$job_dir/evcns_v${version}" "$rows" "$cols" > stdout.txt 2> stderr.txt
+    cat log.txt >> "$batch/all_${suite}.log"
+    printf '\n[Application stdout]\n' >> "$batch/all_${suite}.log"
+    cat stdout.txt >> "$batch/all_${suite}.log"
+    if [[ -s stderr.txt ]]; then
+        printf '\n[Application stderr]\n' >> "$batch/all_${suite}.log"
+        cat stderr.txt >> "$batch/all_${suite}.log"
+    fi
     grep -Fxq "Shutdown confirmed: READY=$stations TERMINATED=$stations" log.txt
 
     # Message count/byte validation and per-message API/observed-completion means.
@@ -212,7 +231,7 @@ for offset in 0 1 2; do
         }
     ' stdout.txt log.txt > run.csv
     printf 'exit=0\nREADY=%s\nTERMINATED=%s\nmessage_counts_and_bytes=balanced\n' "$stations" "$stations" > PASSED.txt
-    # Serialized arrays/repeats guarantee one writer per batch.
+    # Array concurrency is one, so there is only one CSV/log writer per batch.
     tail -n +2 metrics.csv >> "$batch/${suite}_messages.csv"
     tail -n +2 run.csv >> "$batch/${suite}_runs.csv"
     echo "PASS $suite ${rows}x${cols}, repeat $rep/$repeats, V$version"

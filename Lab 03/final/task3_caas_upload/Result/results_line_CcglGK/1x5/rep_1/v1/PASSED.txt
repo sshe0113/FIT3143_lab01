@@ -1,0 +1,4 @@
+exit=0
+READY=5
+TERMINATED=5
+message_counts_and_bytes=balanced

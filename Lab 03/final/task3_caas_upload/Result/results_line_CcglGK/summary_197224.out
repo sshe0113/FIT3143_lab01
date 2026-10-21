@@ -1,0 +1,3 @@
+COMPLETE: 30 sizes, 3 versions, 1 repeats; 90 validated simulations.
+CSV timings are MPI API time / observed completion, not isolated one-way latency.
+Comp sums computation-section thread CPU seconds; excludes output, lock acquisition, sleep and MPI communication.

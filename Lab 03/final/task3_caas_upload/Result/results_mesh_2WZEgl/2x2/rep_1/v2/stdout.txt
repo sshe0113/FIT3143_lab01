@@ -1,0 +1,31 @@
+[Node 1] Refer EV to neighbour (0,0), free=4
+[Node 3] Base recommends 1 node(s): (0,0) -> forward to EVs
+[Node 2] Refer EV to neighbour (0,0), free=4
+[Node 0] Base recommends 1 node(s): (1,1) -> forward to EVs
+[Node 1] Refer EV to neighbour (1,1), free=3
+[Node 2] Refer EV to neighbour (1,1), free=3
+[Node 3] Refer EV to neighbour (1,0), free=4
+[Node 0] Refer EV to neighbour (1,0), free=4
+[Node 1] Base recommends 1 node(s): (1,0) -> forward to EVs
+[Node 3] Refer EV to neighbour (0,1), free=3
+[Node 0] Refer EV to neighbour (0,1), free=3
+[Node 2] Base recommends 1 node(s): (0,1) -> forward to EVs
+[Node 0] Base recommends 1 node(s): (1,1) -> forward to EVs
+[Node 1] Base recommends 0 node(s): no available nodes nearby
+[Node 3] Base recommends 0 node(s): no available nodes nearby
+[Node 2] Base recommends 0 node(s): no available nodes nearby
+[Node 0] Base recommends 1 node(s): (1,1) -> forward to EVs
+[Node 1] Base recommends 0 node(s): no available nodes nearby
+[Node 3] Base recommends 0 node(s): no available nodes nearby
+[Node 2] Base recommends 0 node(s): no available nodes nearby
+[Node 0] Refer EV to neighbour (0,1), free=3
+[Node 3] Refer EV to neighbour (0,1), free=3
+[Node 2] Base recommends 1 node(s): (0,1) -> forward to EVs
+[Node 1] Base recommends 1 node(s): (1,0) -> forward to EVs
+[Node 0] Base recommends 0 node(s): no available nodes nearby
+[Node 3] Base recommends 0 node(s): no available nodes nearby
+[Node 2] Base recommends 0 node(s): no available nodes nearby
+[Node 3] Refer EV to neighbour (0,1), free=4
+[Node 2] Refer EV to neighbour (0,0), free=3
+[Charging Nodes Average] Overall: 30.0209s | Comm: 0.0001s | Comp: 0.000107069s
+[Base Station] Overall: 30.0362s | Comm: 0.0001s | Comp: 0.000018746s
