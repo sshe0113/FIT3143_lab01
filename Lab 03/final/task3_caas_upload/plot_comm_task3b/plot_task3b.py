@@ -68,6 +68,22 @@ def load_data(folder):
                                             int(r["rows"]), int(r["cols"])))
 
 
+def label_peak(ax, stations, values, color):
+    # Highlight each maximum; put its value in the clear space above the lines.
+    valid = [i for i, value in enumerate(values) if math.isfinite(value)]
+    if not valid:
+        return
+    index = max(valid, key=lambda i: values[i])
+    x, y = stations[index], values[index]
+    is_send = color == "#4477AA"
+    name = "Send" if is_send else "Receive"
+    ax.scatter([x], [y], s=32, color=color, edgecolors="white", linewidths=0.7, zorder=4)
+    ax.text(0.02 if is_send else 0.98, 0.97, f"{name} max: {y:.2f} us\n{x} stations",
+            transform=ax.transAxes, ha="left" if is_send else "right", va="top",
+            fontsize=8, color=color, zorder=5,
+            bbox=dict(boxstyle="round,pad=0.25", facecolor="white", edgecolor=color, alpha=0.9))
+
+
 def plot_messages(records, tags, title, output, filename):
     fig, axes = plt.subplots(2 if len(tags) > 2 else 1, 2, figsize=(12, 7.5 if len(tags) > 2 else 4.5),
                              squeeze=False)
@@ -95,7 +111,10 @@ def plot_messages(records, tags, title, output, filename):
         ax.set_axisbelow(True)
         ax.grid(axis="both", which="major", alpha=0.25)
         ax.spines[["top", "right"]].set_visible(False)
-        ax.legend(frameon=False, fontsize=9)
+        ax.legend(frameon=False, fontsize=8, loc="lower right", ncol=2)
+        ax.margins(y=0.35)
+        label_peak(ax, stations, send, "#4477AA")
+        label_peak(ax, stations, receive, "#EE7733")
     fig.suptitle(f"Task 3b - {VERSION.upper()} Line: {title}", fontsize=16)
     fig.tight_layout(rect=(0, 0, 1, 0.95))
     fig.savefig(output / filename, dpi=300, bbox_inches="tight")
