@@ -1,11 +1,11 @@
 """Plot selected mesh communication times for V1, V2 and V3.
 
-Keep this script with v1_mesh.csv, v2_mesh.csv and v3_mesh.csv.
+Keep this script with mesh_runs.csv in the same folder.
 Install: python -m pip install matplotlib
 Run:     python plot_comm.py
 
-The CSVs are version-filtered copies of the original mesh_runs.csv, with
-all original columns and values retained. Input files are read only.
+mesh_runs.csv is copied unchanged from the CAAS results.
+The script reads it and filters each version; the input file is not modified.
 """
 
 import csv
@@ -25,10 +25,10 @@ COLORS = ["#4477AA", "#EE7733", "#228833"]
 def main():
     # Resolve files relative to this script, so the whole folder can be moved.
     folder = Path(__file__).resolve().parent
+    with (folder / "mesh_runs.csv").open(encoding="utf-8-sig", newline="") as file:
+        records = list(csv.DictReader(file))
     selected = []
     for version in VERSIONS:
-        with (folder / f"{version}_mesh.csv").open(encoding="utf-8-sig", newline="") as file:
-            records = list(csv.DictReader(file))
         for rows, cols in GRID_SIZES:
             matches = [r for r in records if r["suite"] == "mesh"
                        and r["version"] == version
@@ -42,7 +42,7 @@ def main():
 
     output = folder / "output"
     output.mkdir(exist_ok=True)
-    # Save the nine plotted values separately from the original input CSVs.
+    # Save the nine plotted values separately from the original input CSV.
     with (output / "comm_comparison.csv").open("w", newline="", encoding="utf-8-sig") as file:
         writer = csv.DictWriter(file, fieldnames=list(selected[0]))
         writer.writeheader()
