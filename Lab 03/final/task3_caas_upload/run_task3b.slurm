@@ -2,8 +2,6 @@
 #SBATCH --job-name=task3b_line
 #SBATCH --partition=defq
 #SBATCH --time=00:05:00
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
 #SBATCH --cpus-per-task=7
 #SBATCH --output=%x-%A_%a.out
 set -euo pipefail
