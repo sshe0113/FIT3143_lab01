@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=evcns_mesh
+#SBATCH --job-name=evcns_v2_mesh
 #SBATCH --time=00:05:00
 #SBATCH --mem=16G
 #SBATCH --cpus-per-task=7
@@ -8,11 +8,11 @@
 set -euo pipefail
 
 suite=mesh
-repetitions=3
+repetitions=1
 csv_header='version,suite,rows,cols,stations,processes,replicate,tag,message,sent,received,send_bytes,receive_bytes,send_call_time_seconds,receive_call_time_seconds,send_completion_seconds,receive_completion_seconds,mean_send_call_us,mean_receive_call_us,mean_send_completion_us,mean_receive_completion_us'
 
 # No arguments: submit one five-minute job per size, linked to run sequentially.
-# Run from the directory containing evcns.c and both Slurm scripts.
+# Run from the directory containing evcns_v2.c, utils.c, utils.h and both Slurm scripts.
 if [[ $# -eq 0 ]]; then
     if [[ -n "${SLURM_JOB_ID:-}" ]]; then
         source_dir="$SLURM_SUBMIT_DIR"
@@ -20,7 +20,9 @@ if [[ $# -eq 0 ]]; then
         source_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
     fi
     script="$source_dir/run_${suite}.slurm"
-    [[ -f "$source_dir/evcns.c" ]] || { echo "evcns.c is missing from $source_dir" >&2; exit 1; }
+    for file in evcns_v2.c utils.c utils.h; do
+        [[ -f "$source_dir/$file" ]] || { echo "$file is missing from $source_dir" >&2; exit 1; }
+    done
     sizes=(2x2 2x3 2x4 3x3 2x5 3x4 2x7 3x5 4x4 3x6 4x5 3x7 2x11 4x6 5x5 2x13 3x9 4x7 5x6 4x8 3x11 2x17 5x7 6x6 2x19 3x13 5x8 6x7 4x11 5x9)
 
     # Match seven CPUs to the seven OpenMP threads, using actual node capacity.
@@ -48,8 +50,8 @@ if [[ $# -eq 0 ]]; then
         exit 1
     fi
 
-    batch_dir="$(mktemp -d "$source_dir/results_${suite}_XXXXXX")"
-    cp -- "$source_dir/evcns.c" "$batch_dir/evcns.c"
+    batch_dir="$(mktemp -d "$source_dir/results_v2_${suite}_XXXXXX")"
+    cp -- "$source_dir/evcns_v2.c" "$source_dir/utils.c" "$source_dir/utils.h" "$batch_dir/"
     cp -- "$script" "$batch_dir/run_${suite}.slurm"
     printf '%s\n' "$csv_header" > "$batch_dir/${suite}_results.csv"
     previous=""
@@ -61,7 +63,7 @@ if [[ $# -eq 0 ]]; then
         index=$((index + 1))
         options=(--parsable --chdir="$batch_dir" --nodes="$nodes" --ntasks="$tasks"
                  --ntasks-per-node="$per_node" --cpus-per-task=7
-                 --job-name="${suite}_${size}" --output="$batch_dir/${size}_%j.out")
+                 --job-name="v2_${suite}_${size}" --output="$batch_dir/${size}_%j.out")
         if [[ -n "$previous" ]]; then options+=(--dependency="afterany:$previous"); fi
         job="$(sbatch "${options[@]}" "$batch_dir/run_${suite}.slurm" "$rows" "$cols" "$batch_dir" "$index")"
         previous=${job%%;*}
@@ -83,13 +85,13 @@ tasks=$((stations + 1))
 job_dir="$batch_dir/${rows}x${cols}/job_${SLURM_JOB_ID}"
 mkdir -p "$job_dir"
 module load openmpi/4.1.5-gcc-11.2.0-ux65npg
-mpicc -std=gnu11 -O2 -fopenmp -o "$job_dir/evcns" "$batch_dir/evcns.c"
+mpicc -std=gnu11 -O2 -fopenmp -o "$job_dir/evcns" "$batch_dir/evcns_v2.c" "$batch_dir/utils.c"
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export OMP_DYNAMIC=FALSE
 export OMP_PLACES=cores
 export OMP_PROC_BIND=close
-export EVCNS_PREDEFINED_PERIOD=1.5
-export EVCNS_BUSY_PERCENT=70
+# Match ReadArguments in utils.c; override this for the predefined-period tests.
+export EVCNS_PRED_PERIOD="${EVCNS_PRED_PERIOD:-1.5}"
 
 for ((rep=1; rep<=repetitions; rep++)); do
     run_dir="$job_dir/rep_$rep"
@@ -107,7 +109,7 @@ for ((rep=1; rep<=repetitions; rep++)); do
         }
         $1 == "METRIC" {
             tag=$5
-            if (NF!=13 || $3!=rows || $4!=cols || tag<1 || tag>8 || seen[tag]++ || $6!=$7 || $8!=$9) { bad=1; next }
+            if (NF!=13 || $2!=2 || $3!=rows || $4!=cols || tag<1 || tag>8 || seen[tag]++ || $6!=$7 || $8!=$9) { bad=1; next }
             n++
             sc=($6>0 ? sprintf("%.6f",$10*1000000/$6) : "")
             rc=($7>0 ? sprintf("%.6f",$11*1000000/$7) : "")

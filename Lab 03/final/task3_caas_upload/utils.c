@@ -4,6 +4,17 @@
  */
 #include "utils.h"
 
+/* CPU seconds used by the calling thread; sleep and descheduling are excluded. */
+double ComputationTime(void) {
+    struct timespec value;
+    if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &value) != 0) {
+        perror("clock_gettime");
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        exit(EXIT_FAILURE);
+    }
+    return (double)value.tv_sec + (double)value.tv_nsec / 1e9;
+}
+
 // Initialize globals
 const double SIMULATION_SEC = 30.0;
 const double PORT_PERIOD = 2.0;
@@ -168,7 +179,7 @@ void CreateGrid(MPI_Comm comm, int nrows, int ncols, MPI_Comm *comm2D,
  * This mechanism is used to generate dynamic, independent load fluctuations across the charging 
  * network without blocking the node's main communication thread.
  */
-void SimulatePort(int thread_id, int ports[NUM_PORTS], bool *running_flag) {
+void SimulatePort(int thread_id, int ports[NUM_PORTS], bool *running_flag, double *comp_time) {
     // Record the last updated time of a port
     double last_update = MPI_Wtime();
     for (;;) {
@@ -181,12 +192,13 @@ void SimulatePort(int thread_id, int ports[NUM_PORTS], bool *running_flag) {
             // Mutex lock
             #pragma omp critical
             {
+                double c_start = ComputationTime();
                 // Default: 70% busy / 30% free
                 ports[thread_id] = rand() % 100 < CONGEST_RATE ? 0 : 1;
+                *comp_time += ComputationTime() - c_start;
             }
             last_update = MPI_Wtime();
         }
-
         usleep(1000);
     }
 }
@@ -198,12 +210,14 @@ void SimulatePort(int thread_id, int ports[NUM_PORTS], bool *running_flag) {
  * The same unnamed critical region as SimulatePort prevents any port write while
  * the whole array is being summed. It does not reserve or consume a port.
  */
-int AvailablePorts(int ports[NUM_PORTS]) {
+int AvailablePorts(int ports[NUM_PORTS], double *comp_time) {
     int available = 0;
     /* Same unnamed critical region as port writes: sum a consistent snapshot. */
     #pragma omp critical
     {
+        double c_start = ComputationTime();
         for (int i = 0; i < NUM_PORTS; i++) available += ports[i];
+        *comp_time += ComputationTime() - c_start;
     }
     return available;
 }
@@ -251,11 +265,14 @@ void IncidentDateTime(char text[32]) {
  * The own snapshot is retained even if port workers change it during the enquiry.
  */
 void BuildReport(MsgData *report, int rank, const int coord[2], int available,
-                 const int avail_neigh[4], int degree, double start_time) {
-    *report = (MsgData){.timestamp = MPI_Wtime() - start_time, .sender_rank = rank,
+                 const int avail_neigh[4], int degree, double start_time, double *comp_time) {
+    double timestamp = MPI_Wtime() - start_time;
+    double c_start = ComputationTime();
+    *report = (MsgData){.timestamp = timestamp, .sender_rank = rank,
         .coords = {coord[0], coord[1]}, .avail_ports = available,
         .msg_exchanged = degree * 2, .msg_size = degree * 2 * (int)sizeof(int)};
     for (int i = 0; i < 4; i++) report->avail_neigh[i] = avail_neigh[i];
+    *comp_time += ComputationTime() - c_start;
     IncidentDateTime(report->incident_time);
 }
 
@@ -280,11 +297,13 @@ void BuildReport(MsgData *report, int rank, const int coord[2], int available,
  * @param coord The 2D grid coordinates [row, column] of the current node.
  * @param avail An array containing the available port counts of the four neighboring nodes.
  */
-void LocalReferral(int rank, const int coord[2], const int avail[4]) {
+void LocalReferral(int rank, const int coord[2], const int avail[4], double *comp_time) {
+    double c_start = ComputationTime();
     const int dr[4] = {-1, 1, 0, 0}, dc[4] = {0, 0, -1, 1};
     int chosen = -1;
     for (int i = 0; i < 4; i++)
         if (avail[i] > THRESHOLD && (chosen < 0 || avail[i] > avail[chosen])) chosen = i;
+    *comp_time += ComputationTime() - c_start;
     if (chosen >= 0)
         printf("[Node %d] Refer EV to neighbour (%d,%d), free=%d\n",
                rank, coord[0] + dr[chosen], coord[1] + dc[chosen], avail[chosen]);
@@ -373,7 +392,7 @@ void TrackReceiveMetric(int tag, int messages, int payload_bytes, double call_ti
  * It safely calculates the locally available ports using an OpenMP critical section and 
  * immediately replies, assisting the neighbor's decentralized load-balancing efforts.
  */
-void AnswerNeighbours(MPI_Comm comm2D, int ports[NUM_PORTS]) {
+void AnswerNeighbours(MPI_Comm comm2D, int ports[NUM_PORTS], double *comp_time) {
     int flag, request;
     MPI_Status status;
     MPI_Iprobe(MPI_ANY_SOURCE, MSG_REQ_NEIGHBOR, comm2D, &flag, &status);
@@ -382,7 +401,9 @@ void AnswerNeighbours(MPI_Comm comm2D, int ports[NUM_PORTS]) {
     MPI_Recv(&request, 1, MPI_INT, status.MPI_SOURCE, MSG_REQ_NEIGHBOR, comm2D, MPI_STATUS_IGNORE);
     double elapsed = MPI_Wtime() - start;
     TrackReceiveMetric(MSG_REQ_NEIGHBOR, 1, sizeof(int), elapsed, elapsed);
-    int available = AvailablePorts(ports);
+    
+    int available = AvailablePorts(ports, comp_time);
+    
     start = MPI_Wtime();
     MPI_Send(&available, 1, MPI_INT, status.MPI_SOURCE, MSG_RES_NEIGHBOR, comm2D);
     elapsed = MPI_Wtime() - start;
@@ -435,7 +456,8 @@ void BaseOpen(BaseState *base, int nrows, int ncols, int version) {
  * and returns every candidate in the first qualifying layer. It does not reserve
  * ports or contact these candidates to confirm their current availability.
  */
-int ProcessReport(BaseState *base, const MsgData *report, int *best_coords) {
+int ProcessReport(BaseState *base, const MsgData *report, int *best_coords, double *comp_time) {
+    double c_start = ComputationTime();
     int rows = base->nrows, cols = base->ncols;
     int row = report->coords[0], col = report->coords[1];
     if (row < 0 || row >= rows || col < 0 || col >= cols || report->avail_ports > THRESHOLD) {
@@ -504,6 +526,7 @@ int ProcessReport(BaseState *base, const MsgData *report, int *best_coords) {
     }
 
     base->ttl_alerts++;
+    *comp_time += ComputationTime() - c_start;
     fprintf(base->log_file, "T:%.6fs | ALERT [%d] | Incident: %s | Rank: %d Coord: (%d,%d) | Ports Free: %d | Neighbor Free: [T:%d, B:%d, L:%d, R:%d] | Msgs: %d | Msg Size: %d Bytes\n",
             report->timestamp, base->ttl_alerts, report->incident_time, report->sender_rank, row, col,
             report->avail_ports, report->avail_neigh[0], report->avail_neigh[1],
@@ -513,6 +536,7 @@ int ProcessReport(BaseState *base, const MsgData *report, int *best_coords) {
         fprintf(base->log_file, " (%d,%d)", best_coords[2*i], best_coords[2*i+1]);
     fprintf(base->log_file, " | recent-neighbour shortcut=%d\n", degree > 0 && recent);
     fflush(base->log_file);
+    
     return found_count;
 }
 
@@ -572,7 +596,7 @@ void WriteMetrics(int rows, int cols, int version) {
         times[tag-1][3] = m->receive_lifetime;
     }
 
-    // Updated: 40 values = 10 tags * 4 counters; the base is world rank size - 1.
+    // 40 values = 10 tags * 4 counters; the base is world rank size - 1.
     MPI_Reduce(counts, sums, 40, MPI_LONG_LONG_INT, MPI_SUM, size-1, MPI_COMM_WORLD);
     MPI_Reduce(times, totals, 40, MPI_DOUBLE, MPI_SUM, size-1, MPI_COMM_WORLD);
     if (rank == size-1) {
@@ -599,4 +623,77 @@ void WriteMetrics(int rows, int cols, int version) {
         fprintf(file, "Shutdown confirmed: READY=%lld TERMINATED=%lld\n", sums[6][0], sums[7][0]);
         fclose(file);
     }
+}
+
+/**
+ * @brief Aggregates and prints the average performance metrics across all charging nodes.
+ *
+ * @details
+ * ### What it is:
+ * A performance reduction utility executed by all slave nodes (charging stations) at the end of the simulation. 
+ * It records overall wall time, the instrumented MPI send/receive API wall time,
+ * and CPU time accumulated only inside computation sections. The metrics are not additive. 
+ * 
+ * ### What it is used for:
+ * It uses `MPI_Reduce` to gather these individual timing metrics from the entire distributed grid and sends them 
+ * to a designated root node (`comm_rank == 0`). The root node then calculates and prints the exact average 
+ * overall, communication, and computation times across the network. This provides the macro-level experimental 
+ * data required to justify the efficiency of the charging nodes' architecture in Task 3.
+ *
+ * @param comm       The MPI communicator specifically isolating the slave nodes (charging stations).
+ * @param start_time The absolute wall-clock time when the simulation started for this node.
+ * @param comp_time  Computation-section CPU seconds summed across all station threads;
+ *                   excludes lock acquisition, output, MPI communication and sleep.
+ */
+void PrintSlaveMetrics(MPI_Comm comm, double start_time, double comp_time) {
+    double overall_time = MPI_Wtime() - start_time;
+    double comm_time = 0.0;
+    for (int i = 1; i <= 10; i++) {
+        comm_time += message_metrics[i].send_call_time;
+        comm_time += message_metrics[i].receive_call_time;
+    }
+
+    int comm_rank, slave_size;
+    MPI_Comm_rank(comm, &comm_rank);
+    MPI_Comm_size(comm, &slave_size);
+
+    double sum_overall = 0.0, sum_comm = 0.0, sum_comp = 0.0;
+    MPI_Reduce(&overall_time, &sum_overall, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
+    MPI_Reduce(&comm_time, &sum_comm, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
+    MPI_Reduce(&comp_time, &sum_comp, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
+
+    if (comm_rank == 0) {
+        printf("[Charging Nodes Average] Overall: %.4fs | Comm: %.4fs | Comp: %.9fs\n",
+               sum_overall / slave_size, sum_comm / slave_size, sum_comp / slave_size);
+        fflush(stdout);
+    }
+}
+
+/**
+ * @brief Calculates and prints the standalone performance metrics for the Base Station.
+ *
+ * @details
+ * ### What it is:
+ * A local performance profiling function executed exclusively by the Base Station (master node) upon 
+ * simulation completion. It reports overall wall time, recorded send/receive API wall
+ * time, and separately accumulated computation-section CPU time.
+ * 
+ * ### What it is used for:
+ * It is used to directly output the isolated operational metrics of the centralized Base Station to the console. 
+ * By separating the Master's metrics from the Slaves', it allows you to precisely analyze whether the Base Station's 
+ * scheduling loop (V1/V2) or asynchronous event-driven state machine (V3) is acting as a computational or communicational 
+ * bottleneck under heavy grid congestion.
+ *
+ * @param start_time The absolute wall-clock time when the simulation started for the Base Station.
+ * @param comp_time  Base computation-section CPU seconds, excluding report logging.
+ */
+void PrintMasterMetrics(double start_time, double comp_time) {
+    double overall_time = MPI_Wtime() - start_time;
+    double comm_time = 0.0;
+    for (int i = 1; i <= 10; i++) {
+        comm_time += message_metrics[i].send_call_time;
+        comm_time += message_metrics[i].receive_call_time;
+    }
+    printf("[Base Station] Overall: %.4fs | Comm: %.4fs | Comp: %.9fs\n", overall_time, comm_time, comp_time);
+    fflush(stdout);
 }
