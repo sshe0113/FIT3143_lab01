@@ -123,21 +123,21 @@ void ReadArguments(int argc, char **argv, int size, int *nrows, int *ncols);
 void CreateDataType(MPI_Datatype *report_type);
 void CreateGrid(MPI_Comm comm, int nrows, int ncols, MPI_Comm *comm2D,
                 int coord[2], int neighbors[4]);
-void SimulatePort(int thread_id, int ports[NUM_PORTS], bool *running_flag);
+void SimulatePort(int thread_id, int ports[NUM_PORTS], bool *running_flag, double *comp_time);
 int AvailablePorts(int ports[NUM_PORTS]);
 void IncidentDateTime(char text[32]);
 void BuildReport(MsgData *report, int rank, const int coord[2], int available,
                  const int avail_neigh[4], int degree, double start_time);
 void LocalReferral(int rank, const int coord[2], const int avail[4]);
 void ShowReferral(int rank, int count, const int *coords);
-void AnswerNeighbours(MPI_Comm comm2D, int ports[NUM_PORTS]);
+void AnswerNeighbours(MPI_Comm comm2D, int ports[NUM_PORTS], double *comp_time);
 void TrackSendMetric(int tag, int messages, int payload_bytes, double call_time, double lifetime);
 void TrackReceiveMetric(int tag, int messages, int payload_bytes, double call_time, double lifetime);
 void WriteMetrics(int rows, int cols, int version);
 void BaseOpen(BaseState *base, int nrows, int ncols, int version);
-int ProcessReport(BaseState *base, const MsgData *report, int *best_coords);
+int ProcessReport(BaseState *base, const MsgData *report, int *best_coords, double *comp_time);
 void BaseClose(BaseState *base);
-void PrintSlaveMetrics(MPI_Comm comm, double start_time);
-void PrintMasterMetrics(double start_time);
+void PrintSlaveMetrics(MPI_Comm comm, double start_time, double comp_time);
+void PrintMasterMetrics(double start_time, double comp_time);
 
 #endif // EVCNS_UTILS_H

@@ -39,12 +39,14 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
 
     MPI_Barrier(world_comm);
     double start_time = MPI_Wtime();
+    double node_comp_time = 0.0;
 
-    #pragma omp parallel num_threads(NUM_PORTS + 1) shared(ports, running_flag)
+    #pragma omp parallel num_threads(NUM_PORTS + 1) shared(ports, running_flag, node_comp_time)
     {
         int thread_id = omp_get_thread_num();
         // One thread checks the team size; the same value applies to every thread.
         if (thread_id == 0 && omp_get_num_threads() != NUM_PORTS + 1) MPI_Abort(world_comm, EXIT_FAILURE);
+        double comp_time = 0.0;
         /**
          * ### Port State Simulation (Worker Threads)
          * These worker threads asynchronously simulate real-world electric vehicle behavior by randomly 
@@ -53,7 +55,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
          * network without blocking the node's main communication thread.
          */
         if (thread_id < NUM_PORTS) {
-            SimulatePort(thread_id, ports, &running_flag);
+            SimulatePort(thread_id, ports, &running_flag, &comp_time);
         } else {
             /**
              * ### Main Thread: Centralized Scheduling Loop Setup
@@ -72,7 +74,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                  * It safely calculates the locally available ports using an OpenMP critical section and 
                  * immediately replies, assisting the neighbor's decentralized load-balancing efforts.
                  */
-                AnswerNeighbours(comm2D, ports);
+                AnswerNeighbours(comm2D, ports, &comp_time);
                 int flag;
                 MPI_Status status;
                 MPI_Iprobe(size-1, MPI_ANY_TAG, world_comm, &flag, &status);
@@ -101,11 +103,12 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                      * It ensures strictly serialized local congestion checking, forcing the node to execute blocking MPI_Send 
                      * and MPI_Recv sequentially to all neighbors, replacing parallel probing.
                      */
+                    double comp_s = MPI_Wtime();
                     int available = AvailablePorts(ports);
+                    comp_time += MPI_Wtime() - comp_s;
                     if (available <= THRESHOLD) {
                         int avail_neigh[4] = {NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR};
                         int degree = 0;
-                        bool all_full = true;
 
                         for (int i = 0; i < 4; i++) {
                             if (neighbors[i] == MPI_PROC_NULL) continue;
@@ -118,7 +121,6 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                             elapsed = MPI_Wtime() - start;
                             TrackReceiveMetric(MSG_RES_NEIGHBOR, 1, sizeof(int), elapsed, elapsed);
                             degree++;
-                            if (avail_neigh[i] > THRESHOLD) all_full = false;
                         }
 
                         /**
@@ -128,9 +130,17 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                          * Conversely, if any neighbor is found to have available space, it bypasses the Base Station entirely and 
                          * directly invokes a local referral to redirect the EV traffic.
                          */
+                        comp_s = MPI_Wtime();
+                        bool all_full = true;
+                        for (int i = 0; i < 4; i++) if (avail_neigh[i] > THRESHOLD) all_full = false;
+                        comp_time += MPI_Wtime() - comp_s;
+
                         if (all_full) {
+                            comp_s = MPI_Wtime();
                             MsgData report;
                             BuildReport(&report, rank, coord, available, avail_neigh, degree, start_time);
+                            comp_time += MPI_Wtime() - comp_s;
+                            
                             start = MPI_Wtime();
                             MPI_Send(&report, 1, report_type, size-1, MSG_REPORT, world_comm);
                             elapsed = MPI_Wtime() - start;
@@ -155,9 +165,13 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                                 elapsed = MPI_Wtime() - start;
                                 TrackReceiveMetric(MSG_BS_REPLY, 1, count*2*sizeof(int), elapsed, elapsed);
                             }
+                            comp_s = MPI_Wtime();
                             ShowReferral(rank, count, coords);
+                            comp_time += MPI_Wtime() - comp_s;
                         } else {
+                            comp_s = MPI_Wtime();
                             LocalReferral(rank, coord, avail_neigh);
+                            comp_time += MPI_Wtime() - comp_s;
                         }
                     }
                     start = MPI_Wtime();
@@ -176,6 +190,8 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                 }
             }
         }
+        #pragma omp atomic
+        node_comp_time += comp_time;
     }
     MPI_Comm_free(&comm2D); 
     int signal = 1;
@@ -183,7 +199,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
     MPI_Send(&signal, 1, MPI_INT, size-1, MSG_TERMINATED, world_comm);
     double elapsed = MPI_Wtime() - start;
     TrackSendMetric(MSG_TERMINATED, 1, sizeof(int), elapsed, elapsed);
-    PrintSlaveMetrics(comm, start_time);
+    PrintSlaveMetrics(comm, start_time, node_comp_time);
 }
 
 //===========================================
@@ -220,6 +236,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
      * It establishes the centralized scheduling policy, guaranteeing that network-wide congestion queries are executed sequentially.
      */
     double next_round = base.start_time + CHECK_PERIOD;
+    double comp_time = 0.0;
     while (ack_count < stations) {
         /**
          * ### Message Listening and Termination Signal Handshake
@@ -247,7 +264,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
                 TrackReceiveMetric(MSG_REPORT, 1, report_bytes, elapsed, elapsed);
 
                 int coords[2*stations];
-                int count = ProcessReport(&base, &report, coords);
+                int count = ProcessReport(&base, &report, coords, &comp_time);
                 start = MPI_Wtime();
                 /**
                  * ### Sending Dispatch Responses and Grid Status Records
@@ -337,7 +354,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
      */
     double start_time_copy = base.start_time;
     BaseClose(&base);
-    PrintMasterMetrics(start_time_copy);
+    PrintMasterMetrics(start_time_copy, comp_time);
 }
 
 int main(int argc, char **argv) {

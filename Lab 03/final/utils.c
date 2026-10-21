@@ -168,7 +168,7 @@ void CreateGrid(MPI_Comm comm, int nrows, int ncols, MPI_Comm *comm2D,
  * This mechanism is used to generate dynamic, independent load fluctuations across the charging 
  * network without blocking the node's main communication thread.
  */
-void SimulatePort(int thread_id, int ports[NUM_PORTS], bool *running_flag) {
+void SimulatePort(int thread_id, int ports[NUM_PORTS], bool *running_flag, double *comp_time) {
     // Record the last updated time of a port
     double last_update = MPI_Wtime();
     for (;;) {
@@ -178,12 +178,14 @@ void SimulatePort(int thread_id, int ports[NUM_PORTS], bool *running_flag) {
         if (!running) break;
         // Every two seconds perform once (random change a port status)
         if (MPI_Wtime() - last_update >= PORT_PERIOD) {
+            double c_start = MPI_Wtime();
             // Mutex lock
             #pragma omp critical
             {
                 // Default: 70% busy / 30% free
                 ports[thread_id] = rand() % 100 < CONGEST_RATE ? 0 : 1;
             }
+            *comp_time += MPI_Wtime() - c_start;
             last_update = MPI_Wtime();
         }
         usleep(1000);
@@ -372,7 +374,7 @@ void TrackReceiveMetric(int tag, int messages, int payload_bytes, double call_ti
  * It safely calculates the locally available ports using an OpenMP critical section and 
  * immediately replies, assisting the neighbor's decentralized load-balancing efforts.
  */
-void AnswerNeighbours(MPI_Comm comm2D, int ports[NUM_PORTS]) {
+void AnswerNeighbours(MPI_Comm comm2D, int ports[NUM_PORTS], double *comp_time) {
     int flag, request;
     MPI_Status status;
     MPI_Iprobe(MPI_ANY_SOURCE, MSG_REQ_NEIGHBOR, comm2D, &flag, &status);
@@ -381,7 +383,11 @@ void AnswerNeighbours(MPI_Comm comm2D, int ports[NUM_PORTS]) {
     MPI_Recv(&request, 1, MPI_INT, status.MPI_SOURCE, MSG_REQ_NEIGHBOR, comm2D, MPI_STATUS_IGNORE);
     double elapsed = MPI_Wtime() - start;
     TrackReceiveMetric(MSG_REQ_NEIGHBOR, 1, sizeof(int), elapsed, elapsed);
+    
+    double c_start = MPI_Wtime();
     int available = AvailablePorts(ports);
+    *comp_time += MPI_Wtime() - c_start;
+    
     start = MPI_Wtime();
     MPI_Send(&available, 1, MPI_INT, status.MPI_SOURCE, MSG_RES_NEIGHBOR, comm2D);
     elapsed = MPI_Wtime() - start;
@@ -434,7 +440,8 @@ void BaseOpen(BaseState *base, int nrows, int ncols, int version) {
  * and returns every candidate in the first qualifying layer. It does not reserve
  * ports or contact these candidates to confirm their current availability.
  */
-int ProcessReport(BaseState *base, const MsgData *report, int *best_coords) {
+int ProcessReport(BaseState *base, const MsgData *report, int *best_coords, double *comp_time) {
+    double c_start = MPI_Wtime();
     int rows = base->nrows, cols = base->ncols;
     int row = report->coords[0], col = report->coords[1];
     if (row < 0 || row >= rows || col < 0 || col >= cols || report->avail_ports > THRESHOLD) {
@@ -512,6 +519,8 @@ int ProcessReport(BaseState *base, const MsgData *report, int *best_coords) {
         fprintf(base->log_file, " (%d,%d)", best_coords[2*i], best_coords[2*i+1]);
     fprintf(base->log_file, " | recent-neighbour shortcut=%d\n", degree > 0 && recent);
     fflush(base->log_file);
+    
+    *comp_time += MPI_Wtime() - c_start;
     return found_count;
 }
 
@@ -617,15 +626,15 @@ void WriteMetrics(int rows, int cols, int version) {
  *
  * @param comm       The MPI communicator specifically isolating the slave nodes (charging stations).
  * @param start_time The absolute wall-clock time when the simulation started for this node.
+ * @param comp_time  The aggregated pure computation time gathered accurately across all threads.
  */
-void PrintSlaveMetrics(MPI_Comm comm, double start_time) {
+void PrintSlaveMetrics(MPI_Comm comm, double start_time, double comp_time) {
     double overall_time = MPI_Wtime() - start_time;
     double comm_time = 0.0;
     for (int i = 1; i <= 10; i++) {
         comm_time += message_metrics[i].send_call_time;
         comm_time += message_metrics[i].receive_call_time;
     }
-    double comp_time = overall_time - comm_time;
 
     int comm_rank, slave_size;
     MPI_Comm_rank(comm, &comm_rank);
@@ -660,15 +669,15 @@ void PrintSlaveMetrics(MPI_Comm comm, double start_time) {
  * bottleneck under heavy grid congestion.
  *
  * @param start_time The absolute wall-clock time when the simulation started for the Base Station.
+ * @param comp_time  The aggregated pure computation time accurately accumulated during execution.
  */
-void PrintMasterMetrics(double start_time) {
+void PrintMasterMetrics(double start_time, double comp_time) {
     double overall_time = MPI_Wtime() - start_time;
     double comm_time = 0.0;
     for (int i = 1; i <= 10; i++) {
         comm_time += message_metrics[i].send_call_time;
         comm_time += message_metrics[i].receive_call_time;
     }
-    double comp_time = overall_time - comm_time;
     printf("[Base Station] Overall: %.4fs | Comm: %.4fs | Comp: %.4fs\n", overall_time, comm_time, comp_time);
     fflush(stdout);
 }

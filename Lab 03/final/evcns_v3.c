@@ -81,13 +81,14 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
 
     MPI_Barrier(world_comm);
     double start_time = MPI_Wtime();
+    double node_comp_time = 0.0;
 
-    #pragma omp parallel num_threads(NUM_PORTS + 1) shared(ports, running_flag)
+    #pragma omp parallel num_threads(NUM_PORTS + 1) shared(ports, running_flag, node_comp_time)
     {
         int thread_id = omp_get_thread_num();
         // One thread checks the team size; the same value applies to every thread.
         if (thread_id == 0 && omp_get_num_threads() != NUM_PORTS + 1) MPI_Abort(world_comm, EXIT_FAILURE);
-
+        double comp_time = 0.0;
         /**
          * ### Port State Simulation (Worker Threads)
          * These worker threads asynchronously simulate real-world electric vehicle behavior by randomly 
@@ -96,7 +97,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
          * network without blocking the node's main communication thread.
          */
         if (thread_id < NUM_PORTS) {
-            SimulatePort(thread_id, ports, &running_flag);
+            SimulatePort(thread_id, ports, &running_flag, &comp_time);
         } else {
 
             /**
@@ -168,7 +169,9 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                     }
                     if (Complete(&incoming[i])) {
                         TrackReceiveMetric(MSG_REQ_NEIGHBOR, 1, sizeof(int), 0, MPI_Wtime() - incoming_start[i]);
+                        double comp_s = MPI_Wtime();
                         answers[i] = AvailablePorts(ports);
+                        comp_time += MPI_Wtime() - comp_s;
                         answering_start[i] = MPI_Wtime();
                         MPI_Isend(&answers[i], 1, MPI_INT, neighbors[i], MSG_RES_NEIGHBOR, comm2D, &answering[i]);
                         message_metrics[MSG_RES_NEIGHBOR].send_call_time += MPI_Wtime() - answering_start[i];
@@ -193,8 +196,10 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                     }
                     if (done) {
                         querying = false;
+                        double comp_s = MPI_Wtime();
                         bool all_full = true;
                         for (int i = 0; i < 4; i++) if (avail_neigh[i] > THRESHOLD) all_full = false;
+                        comp_time += MPI_Wtime() - comp_s;
 
                         /**
                          * ### Main Thread: Congestion Reporting & Local Referral
@@ -205,8 +210,10 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                          */
                         if (all_full) {
 
+                            comp_s = MPI_Wtime();
                             // Report the original congestion snapshot and actual neighbour count.
                             BuildReport(&report, rank, coord, available, avail_neigh, degree, start_time);
+                            comp_time += MPI_Wtime() - comp_s;
                             base_start = MPI_Wtime();
                             MPI_Irecv(&count, 1, MPI_INT, size-1, MSG_BS_REPLY, world_comm, &base_receive);
                             message_metrics[MSG_BS_REPLY].receive_call_time += MPI_Wtime() - base_start;
@@ -215,7 +222,11 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                             message_metrics[MSG_REPORT].send_call_time += MPI_Wtime() - report_start;
                             reply_stage = 1;
                             awaiting_base = true;
-                        } else LocalReferral(rank, coord, avail_neigh);
+                        } else {
+                            comp_s = MPI_Wtime();
+                            LocalReferral(rank, coord, avail_neigh);
+                            comp_time += MPI_Wtime() - comp_s;
+                        }
                     }
                 }
 
@@ -246,13 +257,17 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
 
                     // Do not reuse report/reply buffers until both C3 and the full C4 have finished.
                     if (reply_stage == 3 && report_send == MPI_REQUEST_NULL) {
+                        double comp_s = MPI_Wtime();
                         ShowReferral(rank, count, coords_reply);
+                        comp_time += MPI_Wtime() - comp_s;
                         awaiting_base = false;
                     }
                 }
 
                 if (!disabled && !querying && !awaiting_base && MPI_Wtime() - last_check >= CHECK_PERIOD) {
+                    double comp_s = MPI_Wtime();
                     available = AvailablePorts(ports);
+                    comp_time += MPI_Wtime() - comp_s;
                     if (available <= THRESHOLD) {
                         degree = 0;
                         for (int i = 0; i < 4; i++) {
@@ -306,6 +321,8 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                 usleep(1000);
             }
         }
+        #pragma omp atomic
+        node_comp_time += comp_time;
     }
 
     // Workers have joined and outstanding enquiries are complete before the cleanup ACK.
@@ -317,7 +334,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
     double called = MPI_Wtime() - start;
     MPI_Wait(&ack, MPI_STATUS_IGNORE);
     TrackSendMetric(MSG_TERMINATED, 1, sizeof(int), called, MPI_Wtime() - start);
-    PrintSlaveMetrics(comm, start_time);
+    PrintSlaveMetrics(comm, start_time, node_comp_time);
 }
 
 //===========================================
@@ -356,6 +373,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
      * the main loop begins.
      */
     BaseOpen(&base, nrows, ncols, 3);
+    double comp_time = 0.0;
 
     /**
      * ### Simulated Timeout Detection and Shutdown Signaling Broadcast
@@ -416,7 +434,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
                 TrackReceiveMetric(tag, 1, tag == MSG_REPORT ? report_bytes : (int)sizeof(int),
                                    0, MPI_Wtime() - p->incoming_start);
                 if (tag == MSG_REPORT && !p->ready_seen) {
-                    p->count = ProcessReport(&base, &p->report, p->coords);
+                    p->count = ProcessReport(&base, &p->report, p->coords, &comp_time);
                     p->count_start = MPI_Wtime();
 
                     /**
@@ -475,7 +493,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
     
     double start_time_copy = base.start_time;
     BaseClose(&base);
-    PrintMasterMetrics(start_time_copy);
+    PrintMasterMetrics(start_time_copy, comp_time);
 }
 
 int main(int argc, char **argv) {
