@@ -1,0 +1,627 @@
+V2 predefined period tests: 4x4 mesh; one run per value.
+
+===== V2 | Mesh 4x4 | Period 1.5 seconds =====
+Configuration: version=v2 rows=4 cols=4 processes=17 ports=6 threads=7 seconds=30.000 port_period=2.000 check_period=3.000 predefined_period=1.500000 busy_percent=70
+Search: nearest Manhattan layer over the grid; unknown/expired availability is estimated as free.
+Neighbour payloads: request=4 bytes, reply=4 bytes; report Msg Size is their combined payload, excluding network headers.
+T:3.004553s | ALERT [1] | Incident: 2026-10-22T02:21:33+1100 | Rank: 12 Coord: (3,0) | Ports Free: 1 | Neighbor Free: [T:2, B:-2, L:-2, R:2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (1,0) (2,1) (3,2) | recent-neighbour shortcut=0
+T:3.004311s | ALERT [2] | Incident: 2026-10-22T02:21:33+1100 | Rank: 13 Coord: (3,1) | Ports Free: 2 | Neighbor Free: [T:2, B:-2, L:1, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (1,1) (2,2) (3,3) | recent-neighbour shortcut=0
+T:3.004817s | ALERT [3] | Incident: 2026-10-22T02:21:33+1100 | Rank: 0 Coord: (0,0) | Ports Free: 1 | Neighbor Free: [T:-2, B:1, L:-2, R:1] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 2 (0,2) (1,1) | recent-neighbour shortcut=0
+T:3.004218s | ALERT [4] | Incident: 2026-10-22T02:21:33+1100 | Rank: 8 Coord: (2,0) | Ports Free: 2 | Neighbor Free: [T:1, B:1, L:-2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (1,1) (2,2) | recent-neighbour shortcut=0
+T:3.005016s | ALERT [5] | Incident: 2026-10-22T02:21:33+1100 | Rank: 9 Coord: (2,1) | Ports Free: 2 | Neighbor Free: [T:2, B:2, L:2, R:1] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 2 (1,2) (2,3) | recent-neighbour shortcut=0
+T:3.012274s | ALERT [6] | Incident: 2026-10-22T02:21:33+1100 | Rank: 1 Coord: (0,1) | Ports Free: 1 | Neighbor Free: [T:-2, B:2, L:1, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (0,3) (1,2) | recent-neighbour shortcut=0
+T:3.014332s | ALERT [7] | Incident: 2026-10-22T02:21:33+1100 | Rank: 4 Coord: (1,0) | Ports Free: 1 | Neighbor Free: [T:1, B:2, L:-2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (1,2) | recent-neighbour shortcut=0
+T:6.006188s | ALERT [8] | Incident: 2026-10-22T02:21:36+1100 | Rank: 15 Coord: (3,3) | Ports Free: 0 | Neighbor Free: [T:1, B:-2, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (1,3) (2,2) (3,1) | recent-neighbour shortcut=0
+T:6.005832s | ALERT [9] | Incident: 2026-10-22T02:21:36+1100 | Rank: 11 Coord: (2,3) | Ports Free: 1 | Neighbor Free: [T:1, B:0, L:1, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (0,3) (1,2) (2,1) | recent-neighbour shortcut=0
+T:12.012422s | ALERT [10] | Incident: 2026-10-22T02:21:42+1100 | Rank: 15 Coord: (3,3) | Ports Free: 1 | Neighbor Free: [T:2, B:-2, L:0, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (1,3) (2,2) (3,1) | recent-neighbour shortcut=0
+T:12.014805s | ALERT [11] | Incident: 2026-10-22T02:21:42+1100 | Rank: 13 Coord: (3,1) | Ports Free: 0 | Neighbor Free: [T:2, B:-2, L:2, R:0] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (1,1) (2,0) (2,2) | recent-neighbour shortcut=0
+T:12.015608s | ALERT [12] | Incident: 2026-10-22T02:21:42+1100 | Rank: 14 Coord: (3,2) | Ports Free: 0 | Neighbor Free: [T:1, B:-2, L:0, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (1,2) | recent-neighbour shortcut=0
+T:12.017360s | ALERT [13] | Incident: 2026-10-22T02:21:42+1100 | Rank: 11 Coord: (2,3) | Ports Free: 2 | Neighbor Free: [T:2, B:1, L:0, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (0,3) (1,2) | recent-neighbour shortcut=0
+T:12.019350s | ALERT [14] | Incident: 2026-10-22T02:21:42+1100 | Rank: 12 Coord: (3,0) | Ports Free: 2 | Neighbor Free: [T:2, B:-2, L:-2, R:0] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 1 (1,0) | recent-neighbour shortcut=0
+T:12.009518s | ALERT [15] | Incident: 2026-10-22T02:21:42+1100 | Rank: 0 Coord: (0,0) | Ports Free: 2 | Neighbor Free: [T:-2, B:1, L:-2, R:2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 2 (0,2) (1,1) | recent-neighbour shortcut=0
+T:12.020787s | ALERT [16] | Incident: 2026-10-22T02:21:42+1100 | Rank: 7 Coord: (1,3) | Ports Free: 2 | Neighbor Free: [T:1, B:2, L:1, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (0,2) (1,1) | recent-neighbour shortcut=0
+T:12.014968s | ALERT [17] | Incident: 2026-10-22T02:21:42+1100 | Rank: 8 Coord: (2,0) | Ports Free: 2 | Neighbor Free: [T:1, B:2, L:-2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (1,1) | recent-neighbour shortcut=0
+T:12.014880s | ALERT [18] | Incident: 2026-10-22T02:21:42+1100 | Rank: 9 Coord: (2,1) | Ports Free: 2 | Neighbor Free: [T:2, B:0, L:2, R:1] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 1 (0,2) | recent-neighbour shortcut=0
+T:12.014670s | ALERT [19] | Incident: 2026-10-22T02:21:42+1100 | Rank: 10 Coord: (2,2) | Ports Free: 1 | Neighbor Free: [T:1, B:0, L:2, R:2] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 1 (0,2) | recent-neighbour shortcut=0
+T:12.016292s | ALERT [20] | Incident: 2026-10-22T02:21:42+1100 | Rank: 5 Coord: (1,1) | Ports Free: 2 | Neighbor Free: [T:2, B:2, L:1, R:1] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 1 (0,2) | recent-neighbour shortcut=0
+T:12.029398s | ALERT [21] | Incident: 2026-10-22T02:21:42+1100 | Rank: 4 Coord: (1,0) | Ports Free: 1 | Neighbor Free: [T:2, B:2, L:-2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:15.016231s | ALERT [22] | Incident: 2026-10-22T02:21:45+1100 | Rank: 15 Coord: (3,3) | Ports Free: 2 | Neighbor Free: [T:1, B:-2, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (1,3) (2,2) (3,1) | recent-neighbour shortcut=0
+T:15.020970s | ALERT [23] | Incident: 2026-10-22T02:21:45+1100 | Rank: 3 Coord: (0,3) | Ports Free: 1 | Neighbor Free: [T:-2, B:2, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 2 (0,1) (1,2) | recent-neighbour shortcut=0
+T:15.022026s | ALERT [24] | Incident: 2026-10-22T02:21:45+1100 | Rank: 11 Coord: (2,3) | Ports Free: 1 | Neighbor Free: [T:2, B:2, L:1, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (1,2) (2,1) | recent-neighbour shortcut=0
+T:15.034740s | ALERT [25] | Incident: 2026-10-22T02:21:45+1100 | Rank: 4 Coord: (1,0) | Ports Free: 2 | Neighbor Free: [T:2, B:1, L:-2, R:0] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 4 (0,1) (1,2) (2,1) (3,0) | recent-neighbour shortcut=0
+T:18.024511s | ALERT [26] | Incident: 2026-10-22T02:21:48+1100 | Rank: 3 Coord: (0,3) | Ports Free: 2 | Neighbor Free: [T:-2, B:2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (0,1) (1,2) (2,3) | recent-neighbour shortcut=0
+T:18.028352s | ALERT [27] | Incident: 2026-10-22T02:21:48+1100 | Rank: 12 Coord: (3,0) | Ports Free: 0 | Neighbor Free: [T:0, B:-2, L:-2, R:0] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (1,0) (2,1) (3,2) | recent-neighbour shortcut=0
+T:18.023844s | ALERT [28] | Incident: 2026-10-22T02:21:48+1100 | Rank: 8 Coord: (2,0) | Ports Free: 0 | Neighbor Free: [T:2, B:0, L:-2, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (0,0) (1,1) (2,2) | recent-neighbour shortcut=0
+T:21.020526s | ALERT [29] | Incident: 2026-10-22T02:21:51+1100 | Rank: 15 Coord: (3,3) | Ports Free: 2 | Neighbor Free: [T:0, B:-2, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (1,3) (2,2) (3,1) | recent-neighbour shortcut=0
+T:21.022857s | ALERT [30] | Incident: 2026-10-22T02:21:51+1100 | Rank: 13 Coord: (3,1) | Ports Free: 1 | Neighbor Free: [T:2, B:-2, L:0, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (1,1) (2,0) (2,2) | recent-neighbour shortcut=0
+T:21.025859s | ALERT [31] | Incident: 2026-10-22T02:21:51+1100 | Rank: 14 Coord: (3,2) | Ports Free: 2 | Neighbor Free: [T:2, B:-2, L:1, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (1,2) | recent-neighbour shortcut=0
+T:21.017579s | ALERT [32] | Incident: 2026-10-22T02:21:51+1100 | Rank: 0 Coord: (0,0) | Ports Free: 0 | Neighbor Free: [T:-2, B:2, L:-2, R:1] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (0,2) (1,1) (2,0) | recent-neighbour shortcut=0
+T:21.027065s | ALERT [33] | Incident: 2026-10-22T02:21:51+1100 | Rank: 11 Coord: (2,3) | Ports Free: 0 | Neighbor Free: [T:2, B:2, L:2, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (0,3) (1,2) | recent-neighbour shortcut=0
+T:21.029639s | ALERT [34] | Incident: 2026-10-22T02:21:51+1100 | Rank: 10 Coord: (2,2) | Ports Free: 2 | Neighbor Free: [T:2, B:2, L:2, R:0] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 3 (0,2) (1,1) (2,0) | recent-neighbour shortcut=0
+T:24.024133s | ALERT [35] | Incident: 2026-10-22T02:21:54+1100 | Rank: 15 Coord: (3,3) | Ports Free: 2 | Neighbor Free: [T:1, B:-2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (1,3) (2,2) (3,1) | recent-neighbour shortcut=0
+T:24.027505s | ALERT [36] | Incident: 2026-10-22T02:21:54+1100 | Rank: 13 Coord: (3,1) | Ports Free: 0 | Neighbor Free: [T:2, B:-2, L:2, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (1,1) (2,0) (2,2) | recent-neighbour shortcut=0
+T:27.031523s | ALERT [37] | Incident: 2026-10-22T02:21:57+1100 | Rank: 13 Coord: (3,1) | Ports Free: 2 | Neighbor Free: [T:2, B:-2, L:1, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 4 (1,1) (2,0) (2,2) (3,3) | recent-neighbour shortcut=0
+T:27.026185s | ALERT [38] | Incident: 2026-10-22T02:21:57+1100 | Rank: 2 Coord: (0,2) | Ports Free: 2 | Neighbor Free: [T:-2, B:2, L:2, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 4 (0,0) (1,1) (1,3) (2,2) | recent-neighbour shortcut=0
+T:27.028174s | ALERT [39] | Incident: 2026-10-22T02:21:57+1100 | Rank: 5 Coord: (1,1) | Ports Free: 2 | Neighbor Free: [T:2, B:2, L:0, R:2] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 4 (0,0) (1,3) (2,0) (2,2) | recent-neighbour shortcut=0
+T:27.034447s | ALERT [40] | Incident: 2026-10-22T02:21:57+1100 | Rank: 10 Coord: (2,2) | Ports Free: 2 | Neighbor Free: [T:2, B:1, L:2, R:1] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 3 (1,3) (2,0) (3,3) | recent-neighbour shortcut=0
+T:30.027057s | ALERT [41] | Incident: 2026-10-22T02:22:00+1100 | Rank: 6 Coord: (1,2) | Ports Free: 1 | Neighbor Free: [T:2, B:2, L:1, R:1] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 6 (0,1) (0,3) (1,0) (2,1) (2,3) (3,2) | recent-neighbour shortcut=0
+Total Simulation Time: 30.098314 seconds
+Total Congestion Alerts: 41
+Timing: local MPI function time and observed completion time; includes waiting/polling, not isolated one-way network latency.
+METRIC_FIELDS version rows cols tag sent received send_bytes receive_bytes send_call_time receive_call_time send_lifetime receive_lifetime
+METRIC 2 4 4 1 305 305 1220 1220 0.002877622 0.000304098 1.187052942 0.000304098
+METRIC 2 4 4 2 305 305 1220 1220 0.002092158 0.000107263 0.002092158 1.183715963
+METRIC 2 4 4 3 41 41 3280 3280 0.010903842 0.000031238 0.010903842 0.000031238
+METRIC 2 4 4 4 81 81 972 972 0.000682534 0.000061922 0.000682534 0.000061922
+METRIC 2 4 4 5 16 16 64 64 0.000180593 0.000020599 0.659820971 0.000020599
+METRIC 2 4 4 6 16 16 64 64 0.000321599 0.000018743 1.562817753 0.000018743
+METRIC 2 4 4 7 16 16 64 64 0.000178986 0.000018474 0.000178986 0.000018474
+METRIC 2 4 4 8 16 16 64 64 0.000374879 0.000018786 0.000374879 0.000018786
+Total Communication Events: 796 (completed point-to-point messages; collectives excluded)
+Shutdown confirmed: READY=16 TERMINATED=16
+[Node 7] Refer EV to neighbour (0,3), free=3
+[Node 14] Refer EV to neighbour (3,3), free=3
+[Node 2] Refer EV to neighbour (1,2), free=3
+[Node 12] Base recommends 3 node(s): (1,0) (2,1) (3,2) -> forward to EVs
+[Node 13] Base recommends 3 node(s): (1,1) (2,2) (3,3) -> forward to EVs
+[Node 8] Base recommends 2 node(s): (1,1) (2,2) -> forward to EVs
+[Node 10] Refer EV to neighbour (1,2), free=3
+[Node 9] Base recommends 2 node(s): (1,2) (2,3) -> forward to EVs
+[Node 5] Refer EV to neighbour (1,2), free=3
+[Node 0] Base recommends 2 node(s): (0,2) (1,1) -> forward to EVs
+[Node 1] Base recommends 2 node(s): (0,3) (1,2) -> forward to EVs
+[Node 4] Base recommends 1 node(s): (1,2) -> forward to EVs
+[Node 6] Refer EV to neighbour (1,1), free=3
+[Node 15] Base recommends 3 node(s): (1,3) (2,2) (3,1) -> forward to EVs
+[Node 11] Base recommends 3 node(s): (0,3) (1,2) (2,1) -> forward to EVs
+[Node 12] Refer EV to neighbour (3,1), free=4
+[Node 14] Refer EV to neighbour (3,1), free=4
+[Node 7] Refer EV to neighbour (0,3), free=3
+[Node 5] Refer EV to neighbour (2,1), free=4
+[Node 8] Refer EV to neighbour (2,1), free=4
+[Node 4] Refer EV to neighbour (0,0), free=3
+[Node 13] Refer EV to neighbour (2,1), free=4
+[Node 11] Refer EV to neighbour (3,3), free=3
+[Node 12] Refer EV to neighbour (2,0), free=4
+[Node 7] Refer EV to neighbour (1,2), free=4
+[Node 5] Refer EV to neighbour (2,1), free=4
+[Node 1] Refer EV to neighbour (0,2), free=4
+[Node 4] Refer EV to neighbour (2,0), free=4
+[Node 6] Refer EV to neighbour (0,2), free=4
+[Node 15] Base recommends 3 node(s): (1,3) (2,2) (3,1) -> forward to EVs
+[Node 3] Refer EV to neighbour (0,2), free=3
+[Node 13] Base recommends 3 node(s): (1,1) (2,0) (2,2) -> forward to EVs
+[Node 14] Base recommends 1 node(s): (1,2) -> forward to EVs
+[Node 11] Base recommends 2 node(s): (0,3) (1,2) -> forward to EVs
+[Node 12] Base recommends 1 node(s): (1,0) -> forward to EVs
+[Node 7] Base recommends 2 node(s): (0,2) (1,1) -> forward to EVs
+[Node 0] Base recommends 2 node(s): (0,2) (1,1) -> forward to EVs
+[Node 1] Refer EV to neighbour (0,2), free=3
+[Node 8] Base recommends 1 node(s): (1,1) -> forward to EVs
+[Node 9] Base recommends 1 node(s): (0,2) -> forward to EVs
+[Node 5] Base recommends 1 node(s): (0,2) -> forward to EVs
+[Node 10] Base recommends 1 node(s): (0,2) -> forward to EVs
+[Node 4] Base recommends 0 node(s): no available nodes nearby
+[Node 15] Base recommends 3 node(s): (1,3) (2,2) (3,1) -> forward to EVs
+[Node 2] Refer EV to neighbour (1,2), free=4
+[Node 14] Refer EV to neighbour (3,1), free=3
+[Node 0] Refer EV to neighbour (0,1), free=3
+[Node 12] Refer EV to neighbour (3,1), free=3
+[Node 3] Base recommends 2 node(s): (0,1) (1,2) -> forward to EVs
+[Node 7] Refer EV to neighbour (1,2), free=4
+[Node 11] Base recommends 2 node(s): (1,2) (2,1) -> forward to EVs
+[Node 8] Refer EV to neighbour (2,1), free=4
+[Node 10] Refer EV to neighbour (1,2), free=4
+[Node 5] Refer EV to neighbour (2,1), free=4
+[Node 4] Base recommends 4 node(s): (0,1) (1,2) (2,1) (3,0) -> forward to EVs
+[Node 13] Refer EV to neighbour (3,2), free=4
+[Node 2] Refer EV to neighbour (1,2), free=4
+[Node 9] Refer EV to neighbour (1,1), free=3
+[Node 3] Base recommends 3 node(s): (0,1) (1,2) (2,3) -> forward to EVs
+[Node 7] Refer EV to neighbour (2,3), free=4
+[Node 1] Refer EV to neighbour (1,1), free=3
+[Node 12] Base recommends 3 node(s): (1,0) (2,1) (3,2) -> forward to EVs
+[Node 10] Refer EV to neighbour (1,2), free=4
+[Node 8] Base recommends 3 node(s): (0,0) (1,1) (2,2) -> forward to EVs
+[Node 4] Refer EV to neighbour (0,0), free=3
+[Node 6] Refer EV to neighbour (1,1), free=3
+[Node 15] Base recommends 3 node(s): (1,3) (2,2) (3,1) -> forward to EVs
+[Node 2] Refer EV to neighbour (0,3), free=4
+[Node 13] Base recommends 3 node(s): (1,1) (2,0) (2,2) -> forward to EVs
+[Node 14] Base recommends 1 node(s): (1,2) -> forward to EVs
+[Node 0] Base recommends 3 node(s): (0,2) (1,1) (2,0) -> forward to EVs
+[Node 9] Refer EV to neighbour (1,1), free=3
+[Node 11] Base recommends 2 node(s): (0,3) (1,2) -> forward to EVs
+[Node 7] Refer EV to neighbour (0,3), free=4
+[Node 12] Refer EV to neighbour (2,0), free=3
+[Node 1] Refer EV to neighbour (1,1), free=3
+[Node 10] Base recommends 3 node(s): (0,2) (1,1) (2,0) -> forward to EVs
+[Node 4] Refer EV to neighbour (2,0), free=3
+[Node 6] Refer EV to neighbour (2,2), free=3
+[Node 15] Base recommends 3 node(s): (1,3) (2,2) (3,1) -> forward to EVs
+[Node 2] Refer EV to neighbour (0,1), free=4
+[Node 13] Base recommends 3 node(s): (1,1) (2,0) (2,2) -> forward to EVs
+[Node 14] Refer EV to neighbour (2,2), free=4
+[Node 11] Refer EV to neighbour (2,2), free=4
+[Node 7] Refer EV to neighbour (0,3), free=4
+[Node 9] Refer EV to neighbour (2,2), free=4
+[Node 12] Refer EV to neighbour (2,0), free=3
+[Node 4] Refer EV to neighbour (0,0), free=3
+[Node 6] Refer EV to neighbour (1,3), free=3
+[Node 3] Refer EV to neighbour (1,3), free=3
+[Node 11] Refer EV to neighbour (1,3), free=3
+[Node 13] Base recommends 4 node(s): (1,1) (2,0) (2,2) (3,3) -> forward to EVs
+[Node 14] Refer EV to neighbour (3,3), free=3
+[Node 2] Base recommends 4 node(s): (0,0) (1,1) (1,3) (2,2) -> forward to EVs
+[Node 9] Refer EV to neighbour (2,0), free=3
+[Node 5] Base recommends 4 node(s): (0,0) (1,3) (2,0) (2,2) -> forward to EVs
+[Node 12] Refer EV to neighbour (2,0), free=3
+[Node 1] Refer EV to neighbour (0,0), free=3
+[Node 10] Base recommends 3 node(s): (1,3) (2,0) (3,3) -> forward to EVs
+[Node 4] Refer EV to neighbour (0,0), free=3
+[Node 6] Base recommends 6 node(s): (0,1) (0,3) (1,0) (2,1) (2,3) (3,2) -> forward to EVs
+[Charging Nodes Average] Overall: 30.0786s | Comm: 0.0011s | Comp: 0.000096796s
+[Base Station] Overall: 30.0994s | Comm: 0.0013s | Comp: 0.000038673s
+srun: Warning: can't honor --ntasks-per-node set to 8 which doesn't match the requested tasks 17 with the number of requested nodes 3. Ignoring --ntasks-per-node.
+
+===== V2 | Mesh 4x4 | Period 3 seconds =====
+Configuration: version=v2 rows=4 cols=4 processes=17 ports=6 threads=7 seconds=30.000 port_period=2.000 check_period=3.000 predefined_period=3.000000 busy_percent=70
+Search: nearest Manhattan layer over the grid; unknown/expired availability is estimated as free.
+Neighbour payloads: request=4 bytes, reply=4 bytes; report Msg Size is their combined payload, excluding network headers.
+T:3.003615s | ALERT [1] | Incident: 2026-10-22T02:22:05+1100 | Rank: 15 Coord: (3,3) | Ports Free: 0 | Neighbor Free: [T:2, B:-2, L:0, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (1,3) (2,2) (3,1) | recent-neighbour shortcut=0
+T:3.004107s | ALERT [2] | Incident: 2026-10-22T02:22:05+1100 | Rank: 13 Coord: (3,1) | Ports Free: 1 | Neighbor Free: [T:0, B:-2, L:1, R:0] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (1,1) (2,0) (2,2) | recent-neighbour shortcut=0
+T:3.005702s | ALERT [3] | Incident: 2026-10-22T02:22:05+1100 | Rank: 1 Coord: (0,1) | Ports Free: 2 | Neighbor Free: [T:-2, B:0, L:0, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (0,3) (1,0) (1,2) | recent-neighbour shortcut=0
+T:3.004719s | ALERT [4] | Incident: 2026-10-22T02:22:05+1100 | Rank: 2 Coord: (0,2) | Ports Free: 2 | Neighbor Free: [T:-2, B:1, L:2, R:0] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (1,3) (2,2) | recent-neighbour shortcut=0
+T:6.007624s | ALERT [5] | Incident: 2026-10-22T02:22:08+1100 | Rank: 15 Coord: (3,3) | Ports Free: 1 | Neighbor Free: [T:1, B:-2, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 2 (1,3) (2,2) | recent-neighbour shortcut=0
+T:6.003811s | ALERT [6] | Incident: 2026-10-22T02:22:08+1100 | Rank: 7 Coord: (1,3) | Ports Free: 2 | Neighbor Free: [T:0, B:1, L:1, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (2,2) | recent-neighbour shortcut=0
+T:6.008948s | ALERT [7] | Incident: 2026-10-22T02:22:08+1100 | Rank: 11 Coord: (2,3) | Ports Free: 1 | Neighbor Free: [T:2, B:1, L:2, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (2,1) | recent-neighbour shortcut=0
+T:6.015882s | ALERT [8] | Incident: 2026-10-22T02:22:08+1100 | Rank: 5 Coord: (1,1) | Ports Free: 1 | Neighbor Free: [T:0, B:0, L:2, R:0] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 4 (0,0) (0,2) (2,0) (3,1) | recent-neighbour shortcut=0
+T:9.008728s | ALERT [9] | Incident: 2026-10-22T02:22:11+1100 | Rank: 14 Coord: (3,2) | Ports Free: 0 | Neighbor Free: [T:0, B:-2, L:1, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (2,3) (3,0) | recent-neighbour shortcut=0
+T:12.016623s | ALERT [10] | Incident: 2026-10-22T02:22:14+1100 | Rank: 11 Coord: (2,3) | Ports Free: 1 | Neighbor Free: [T:2, B:2, L:2, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 4 (0,3) (1,2) (2,1) (3,2) | recent-neighbour shortcut=0
+T:12.012447s | ALERT [11] | Incident: 2026-10-22T02:22:14+1100 | Rank: 14 Coord: (3,2) | Ports Free: 2 | Neighbor Free: [T:2, B:-2, L:2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (1,2) (2,1) (3,0) | recent-neighbour shortcut=0
+T:12.016831s | ALERT [12] | Incident: 2026-10-22T02:22:14+1100 | Rank: 12 Coord: (3,0) | Ports Free: 0 | Neighbor Free: [T:1, B:-2, L:-2, R:2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 2 (1,0) (2,1) | recent-neighbour shortcut=0
+T:12.015295s | ALERT [13] | Incident: 2026-10-22T02:22:14+1100 | Rank: 3 Coord: (0,3) | Ports Free: 1 | Neighbor Free: [T:-2, B:2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 2 (0,1) (1,2) | recent-neighbour shortcut=0
+T:12.020286s | ALERT [14] | Incident: 2026-10-22T02:22:14+1100 | Rank: 1 Coord: (0,1) | Ports Free: 1 | Neighbor Free: [T:-2, B:2, L:1, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (1,0) (1,2) (2,1) | recent-neighbour shortcut=0
+T:15.020766s | ALERT [15] | Incident: 2026-10-22T02:22:17+1100 | Rank: 12 Coord: (3,0) | Ports Free: 2 | Neighbor Free: [T:1, B:-2, L:-2, R:2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (1,0) (2,1) (3,2) | recent-neighbour shortcut=0
+T:15.015597s | ALERT [16] | Incident: 2026-10-22T02:22:17+1100 | Rank: 0 Coord: (0,0) | Ports Free: 1 | Neighbor Free: [T:-2, B:0, L:-2, R:2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 2 (1,2) (2,1) | recent-neighbour shortcut=0
+T:15.022393s | ALERT [17] | Incident: 2026-10-22T02:22:17+1100 | Rank: 4 Coord: (1,0) | Ports Free: 0 | Neighbor Free: [T:1, B:1, L:-2, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (1,2) (2,1) | recent-neighbour shortcut=0
+T:15.025120s | ALERT [18] | Incident: 2026-10-22T02:22:17+1100 | Rank: 1 Coord: (0,1) | Ports Free: 2 | Neighbor Free: [T:-2, B:1, L:1, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (0,3) (1,2) (2,1) | recent-neighbour shortcut=0
+T:18.019564s | ALERT [19] | Incident: 2026-10-22T02:22:20+1100 | Rank: 15 Coord: (3,3) | Ports Free: 1 | Neighbor Free: [T:1, B:-2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 2 (1,3) (2,2) | recent-neighbour shortcut=0
+T:18.017292s | ALERT [20] | Incident: 2026-10-22T02:22:20+1100 | Rank: 7 Coord: (1,3) | Ports Free: 2 | Neighbor Free: [T:2, B:1, L:2, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (2,2) | recent-neighbour shortcut=0
+T:18.025557s | ALERT [21] | Incident: 2026-10-22T02:22:20+1100 | Rank: 11 Coord: (2,3) | Ports Free: 1 | Neighbor Free: [T:2, B:1, L:2, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (2,1) | recent-neighbour shortcut=0
+T:18.013137s | ALERT [22] | Incident: 2026-10-22T02:22:20+1100 | Rank: 6 Coord: (1,2) | Ports Free: 2 | Neighbor Free: [T:2, B:2, L:2, R:2] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 1 (2,1) | recent-neighbour shortcut=0
+T:18.021272s | ALERT [23] | Incident: 2026-10-22T02:22:20+1100 | Rank: 14 Coord: (3,2) | Ports Free: 1 | Neighbor Free: [T:2, B:-2, L:1, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (2,1) | recent-neighbour shortcut=0
+T:18.025315s | ALERT [24] | Incident: 2026-10-22T02:22:20+1100 | Rank: 13 Coord: (3,1) | Ports Free: 1 | Neighbor Free: [T:2, B:-2, L:1, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=0
+T:18.018988s | ALERT [25] | Incident: 2026-10-22T02:22:20+1100 | Rank: 0 Coord: (0,0) | Ports Free: 1 | Neighbor Free: [T:-2, B:1, L:-2, R:2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 1 (2,0) | recent-neighbour shortcut=0
+T:18.019265s | ALERT [26] | Incident: 2026-10-22T02:22:20+1100 | Rank: 2 Coord: (0,2) | Ports Free: 2 | Neighbor Free: [T:-2, B:2, L:2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (2,0) | recent-neighbour shortcut=0
+T:18.019464s | ALERT [27] | Incident: 2026-10-22T02:22:20+1100 | Rank: 3 Coord: (0,3) | Ports Free: 2 | Neighbor Free: [T:-2, B:2, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:18.027817s | ALERT [28] | Incident: 2026-10-22T02:22:20+1100 | Rank: 10 Coord: (2,2) | Ports Free: 2 | Neighbor Free: [T:2, B:1, L:2, R:1] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 1 (2,0) | recent-neighbour shortcut=0
+T:18.031584s | ALERT [29] | Incident: 2026-10-22T02:22:20+1100 | Rank: 5 Coord: (1,1) | Ports Free: 2 | Neighbor Free: [T:2, B:2, L:1, R:2] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 1 (2,0) | recent-neighbour shortcut=0
+T:18.029701s | ALERT [30] | Incident: 2026-10-22T02:22:20+1100 | Rank: 1 Coord: (0,1) | Ports Free: 2 | Neighbor Free: [T:-2, B:2, L:1, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:24.017233s | ALERT [31] | Incident: 2026-10-22T02:22:26+1100 | Rank: 8 Coord: (2,0) | Ports Free: 1 | Neighbor Free: [T:0, B:0, L:-2, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 4 (0,0) (1,1) (2,2) (3,1) | recent-neighbour shortcut=0
+T:24.025089s | ALERT [32] | Incident: 2026-10-22T02:22:26+1100 | Rank: 3 Coord: (0,3) | Ports Free: 2 | Neighbor Free: [T:-2, B:2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (0,1) (1,2) (2,3) | recent-neighbour shortcut=0
+T:27.030535s | ALERT [33] | Incident: 2026-10-22T02:22:29+1100 | Rank: 13 Coord: (3,1) | Ports Free: 2 | Neighbor Free: [T:0, B:-2, L:2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 4 (1,1) (2,0) (2,2) (3,3) | recent-neighbour shortcut=0
+T:27.020925s | ALERT [34] | Incident: 2026-10-22T02:22:29+1100 | Rank: 8 Coord: (2,0) | Ports Free: 1 | Neighbor Free: [T:1, B:2, L:-2, R:0] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (0,0) (1,1) (2,2) | recent-neighbour shortcut=0
+T:27.034113s | ALERT [35] | Incident: 2026-10-22T02:22:29+1100 | Rank: 12 Coord: (3,0) | Ports Free: 2 | Neighbor Free: [T:1, B:-2, L:-2, R:2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:27.043375s | ALERT [36] | Incident: 2026-10-22T02:22:29+1100 | Rank: 5 Coord: (1,1) | Ports Free: 2 | Neighbor Free: [T:2, B:0, L:1, R:2] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 4 (0,0) (0,2) (1,3) (2,2) | recent-neighbour shortcut=0
+Total Simulation Time: 30.097454 seconds
+Total Congestion Alerts: 36
+Timing: local MPI function time and observed completion time; includes waiting/polling, not isolated one-way network latency.
+METRIC_FIELDS version rows cols tag sent received send_bytes receive_bytes send_call_time receive_call_time send_lifetime receive_lifetime
+METRIC 2 4 4 1 310 310 1240 1240 0.002639854 0.000334321 1.180085992 0.000334321
+METRIC 2 4 4 2 310 310 1240 1240 0.002067553 0.000114049 0.002067553 1.177007543
+METRIC 2 4 4 3 36 36 2880 2880 0.009737312 0.000032931 0.009737312 0.000032931
+METRIC 2 4 4 4 68 68 728 728 0.000642312 0.000053960 0.000642312 0.000053960
+METRIC 2 4 4 5 16 16 64 64 0.000089559 0.000006876 0.700922095 0.000006876
+METRIC 2 4 4 6 16 16 64 64 0.000469045 0.000012561 1.546831519 0.000012561
+METRIC 2 4 4 7 16 16 64 64 0.000174117 0.000005250 0.000174117 0.000005250
+METRIC 2 4 4 8 16 16 64 64 0.000323222 0.000009325 0.000323222 0.000009325
+Total Communication Events: 788 (completed point-to-point messages; collectives excluded)
+Shutdown confirmed: READY=16 TERMINATED=16
+[Node 15] Base recommends 3 node(s): (1,3) (2,2) (3,1) -> forward to EVs
+[Node 11] Refer EV to neighbour (1,3), free=3
+[Node 3] Refer EV to neighbour (1,3), free=3
+[Node 13] Base recommends 3 node(s): (1,1) (2,0) (2,2) -> forward to EVs
+[Node 14] Refer EV to neighbour (2,2), free=3
+[Node 12] Refer EV to neighbour (2,0), free=4
+[Node 6] Refer EV to neighbour (2,2), free=3
+[Node 9] Refer EV to neighbour (2,0), free=4
+[Node 0] Refer EV to neighbour (1,0), free=3
+[Node 5] Refer EV to neighbour (1,0), free=3
+[Node 1] Base recommends 3 node(s): (0,3) (1,0) (1,2) -> forward to EVs
+[Node 2] Base recommends 2 node(s): (1,3) (2,2) -> forward to EVs
+[Node 15] Base recommends 2 node(s): (1,3) (2,2) -> forward to EVs
+[Node 13] Refer EV to neighbour (3,0), free=4
+[Node 7] Base recommends 1 node(s): (2,2) -> forward to EVs
+[Node 11] Base recommends 1 node(s): (2,1) -> forward to EVs
+[Node 6] Refer EV to neighbour (0,2), free=4
+[Node 10] Refer EV to neighbour (3,2), free=3
+[Node 12] Refer EV to neighbour (2,0), free=3
+[Node 9] Refer EV to neighbour (1,1), free=3
+[Node 4] Refer EV to neighbour (2,0), free=3
+[Node 3] Refer EV to neighbour (0,2), free=3
+[Node 1] Refer EV to neighbour (0,0), free=4
+[Node 5] Base recommends 4 node(s): (0,0) (0,2) (2,0) (3,1) -> forward to EVs
+[Node 15] Refer EV to neighbour (2,3), free=3
+[Node 7] Refer EV to neighbour (1,2), free=5
+[Node 13] Refer EV to neighbour (2,1), free=3
+[Node 14] Base recommends 2 node(s): (2,3) (3,0) -> forward to EVs
+[Node 12] Refer EV to neighbour (2,0), free=3
+[Node 10] Refer EV to neighbour (1,2), free=5
+[Node 4] Refer EV to neighbour (0,0), free=3
+[Node 3] Refer EV to neighbour (0,2), free=3
+[Node 5] Refer EV to neighbour (1,2), free=5
+[Node 1] Refer EV to neighbour (0,0), free=3
+[Node 15] Refer EV to neighbour (3,2), free=3
+[Node 7] Refer EV to neighbour (0,3), free=3
+[Node 13] Refer EV to neighbour (2,1), free=3
+[Node 11] Base recommends 4 node(s): (0,3) (1,2) (2,1) (3,2) -> forward to EVs
+[Node 14] Base recommends 3 node(s): (1,2) (2,1) (3,0) -> forward to EVs
+[Node 0] Refer EV to neighbour (1,0), free=3
+[Node 10] Refer EV to neighbour (1,2), free=3
+[Node 12] Base recommends 2 node(s): (1,0) (2,1) -> forward to EVs
+[Node 2] Refer EV to neighbour (1,2), free=3
+[Node 5] Refer EV to neighbour (2,1), free=3
+[Node 3] Base recommends 2 node(s): (0,1) (1,2) -> forward to EVs
+[Node 1] Base recommends 3 node(s): (1,0) (1,2) (2,1) -> forward to EVs
+[Node 11] Refer EV to neighbour (1,3), free=4
+[Node 8] Refer EV to neighbour (2,1), free=3
+[Node 14] Refer EV to neighbour (3,3), free=3
+[Node 13] Refer EV to neighbour (2,1), free=3
+[Node 12] Base recommends 3 node(s): (1,0) (2,1) (3,2) -> forward to EVs
+[Node 10] Refer EV to neighbour (1,2), free=4
+[Node 2] Refer EV to neighbour (1,2), free=4
+[Node 0] Base recommends 2 node(s): (1,2) (2,1) -> forward to EVs
+[Node 4] Base recommends 2 node(s): (1,2) (2,1) -> forward to EVs
+[Node 5] Refer EV to neighbour (1,2), free=4
+[Node 1] Base recommends 3 node(s): (0,3) (1,2) (2,1) -> forward to EVs
+[Node 15] Base recommends 2 node(s): (1,3) (2,2) -> forward to EVs
+[Node 7] Base recommends 1 node(s): (2,2) -> forward to EVs
+[Node 11] Base recommends 1 node(s): (2,1) -> forward to EVs
+[Node 9] Refer EV to neighbour (2,0), free=3
+[Node 6] Base recommends 1 node(s): (2,1) -> forward to EVs
+[Node 14] Base recommends 1 node(s): (2,1) -> forward to EVs
+[Node 13] Base recommends 0 node(s): no available nodes nearby
+[Node 12] Refer EV to neighbour (2,0), free=3
+[Node 0] Base recommends 1 node(s): (2,0) -> forward to EVs
+[Node 4] Refer EV to neighbour (2,0), free=3
+[Node 2] Base recommends 1 node(s): (2,0) -> forward to EVs
+[Node 3] Base recommends 0 node(s): no available nodes nearby
+[Node 10] Base recommends 1 node(s): (2,0) -> forward to EVs
+[Node 5] Base recommends 1 node(s): (2,0) -> forward to EVs
+[Node 1] Base recommends 0 node(s): no available nodes nearby
+[Node 15] Refer EV to neighbour (2,3), free=3
+[Node 7] Refer EV to neighbour (0,3), free=3
+[Node 8] Refer EV to neighbour (3,0), free=3
+[Node 6] Refer EV to neighbour (0,2), free=3
+[Node 14] Refer EV to neighbour (3,1), free=4
+[Node 9] Refer EV to neighbour (3,1), free=4
+[Node 4] Refer EV to neighbour (0,0), free=3
+[Node 10] Refer EV to neighbour (2,3), free=3
+[Node 11] Refer EV to neighbour (3,3), free=3
+[Node 7] Refer EV to neighbour (1,2), free=4
+[Node 14] Refer EV to neighbour (3,1), free=3
+[Node 8] Base recommends 4 node(s): (0,0) (1,1) (2,2) (3,1) -> forward to EVs
+[Node 9] Refer EV to neighbour (3,1), free=3
+[Node 12] Refer EV to neighbour (3,1), free=3
+[Node 2] Refer EV to neighbour (1,2), free=4
+[Node 3] Base recommends 3 node(s): (0,1) (1,2) (2,3) -> forward to EVs
+[Node 4] Refer EV to neighbour (0,0), free=4
+[Node 5] Refer EV to neighbour (1,2), free=4
+[Node 10] Refer EV to neighbour (1,2), free=4
+[Node 1] Refer EV to neighbour (0,0), free=4
+[Node 15] Refer EV to neighbour (2,3), free=3
+[Node 13] Base recommends 4 node(s): (1,1) (2,0) (2,2) (3,3) -> forward to EVs
+[Node 6] Refer EV to neighbour (2,2), free=4
+[Node 7] Refer EV to neighbour (0,3), free=3
+[Node 8] Base recommends 3 node(s): (0,0) (1,1) (2,2) -> forward to EVs
+[Node 14] Refer EV to neighbour (2,2), free=4
+[Node 9] Refer EV to neighbour (2,2), free=4
+[Node 12] Base recommends 0 node(s): no available nodes nearby
+[Node 4] Refer EV to neighbour (0,0), free=4
+[Node 5] Base recommends 4 node(s): (0,0) (0,2) (1,3) (2,2) -> forward to EVs
+[Node 1] Refer EV to neighbour (0,0), free=4
+[Charging Nodes Average] Overall: 30.0758s | Comm: 0.0010s | Comp: 0.000099675s
+[Base Station] Overall: 30.0990s | Comm: 0.0012s | Comp: 0.000034305s
+srun: Warning: can't honor --ntasks-per-node set to 8 which doesn't match the requested tasks 17 with the number of requested nodes 3. Ignoring --ntasks-per-node.
+
+===== V2 | Mesh 4x4 | Period 6 seconds =====
+Configuration: version=v2 rows=4 cols=4 processes=17 ports=6 threads=7 seconds=30.000 port_period=2.000 check_period=3.000 predefined_period=6.000000 busy_percent=70
+Search: nearest Manhattan layer over the grid; unknown/expired availability is estimated as free.
+Neighbour payloads: request=4 bytes, reply=4 bytes; report Msg Size is their combined payload, excluding network headers.
+T:3.004215s | ALERT [1] | Incident: 2026-10-22T02:22:37+1100 | Rank: 15 Coord: (3,3) | Ports Free: 1 | Neighbor Free: [T:2, B:-2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (1,3) (2,2) (3,1) | recent-neighbour shortcut=0
+T:3.004100s | ALERT [2] | Incident: 2026-10-22T02:22:37+1100 | Rank: 14 Coord: (3,2) | Ports Free: 1 | Neighbor Free: [T:0, B:-2, L:2, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (1,2) (2,1) (3,0) | recent-neighbour shortcut=0
+T:3.006720s | ALERT [3] | Incident: 2026-10-22T02:22:37+1100 | Rank: 7 Coord: (1,3) | Ports Free: 2 | Neighbor Free: [T:0, B:2, L:1, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (0,2) (1,1) | recent-neighbour shortcut=0
+T:3.004344s | ALERT [4] | Incident: 2026-10-22T02:22:37+1100 | Rank: 11 Coord: (2,3) | Ports Free: 2 | Neighbor Free: [T:2, B:1, L:0, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (2,1) | recent-neighbour shortcut=0
+T:6.008151s | ALERT [5] | Incident: 2026-10-22T02:22:40+1100 | Rank: 3 Coord: (0,3) | Ports Free: 2 | Neighbor Free: [T:-2, B:0, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 1 (0,1) | recent-neighbour shortcut=0
+T:6.009041s | ALERT [6] | Incident: 2026-10-22T02:22:40+1100 | Rank: 1 Coord: (0,1) | Ports Free: 2 | Neighbor Free: [T:-2, B:1, L:2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (1,0) (2,1) | recent-neighbour shortcut=0
+T:9.009490s | ALERT [7] | Incident: 2026-10-22T02:22:43+1100 | Rank: 13 Coord: (3,1) | Ports Free: 1 | Neighbor Free: [T:2, B:-2, L:1, R:0] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (2,0) | recent-neighbour shortcut=0
+T:9.010314s | ALERT [8] | Incident: 2026-10-22T02:22:43+1100 | Rank: 15 Coord: (3,3) | Ports Free: 1 | Neighbor Free: [T:2, B:-2, L:0, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 1 (2,0) | recent-neighbour shortcut=0
+T:9.008047s | ALERT [9] | Incident: 2026-10-22T02:22:43+1100 | Rank: 4 Coord: (1,0) | Ports Free: 0 | Neighbor Free: [T:2, B:2, L:-2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (1,2) | recent-neighbour shortcut=0
+T:9.010778s | ALERT [10] | Incident: 2026-10-22T02:22:43+1100 | Rank: 12 Coord: (3,0) | Ports Free: 1 | Neighbor Free: [T:2, B:-2, L:-2, R:1] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 1 (2,2) | recent-neighbour shortcut=0
+T:9.012569s | ALERT [11] | Incident: 2026-10-22T02:22:43+1100 | Rank: 3 Coord: (0,3) | Ports Free: 1 | Neighbor Free: [T:-2, B:2, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 1 (1,2) | recent-neighbour shortcut=0
+T:9.008526s | ALERT [12] | Incident: 2026-10-22T02:22:43+1100 | Rank: 9 Coord: (2,1) | Ports Free: 2 | Neighbor Free: [T:2, B:1, L:2, R:0] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 1 (1,2) | recent-neighbour shortcut=0
+T:9.013181s | ALERT [13] | Incident: 2026-10-22T02:22:43+1100 | Rank: 14 Coord: (3,2) | Ports Free: 0 | Neighbor Free: [T:0, B:-2, L:1, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (1,2) | recent-neighbour shortcut=0
+T:9.015263s | ALERT [14] | Incident: 2026-10-22T02:22:43+1100 | Rank: 7 Coord: (1,3) | Ports Free: 2 | Neighbor Free: [T:1, B:2, L:1, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=0
+T:9.016538s | ALERT [15] | Incident: 2026-10-22T02:22:43+1100 | Rank: 8 Coord: (2,0) | Ports Free: 2 | Neighbor Free: [T:0, B:1, L:-2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:9.013958s | ALERT [16] | Incident: 2026-10-22T02:22:43+1100 | Rank: 11 Coord: (2,3) | Ports Free: 2 | Neighbor Free: [T:2, B:1, L:0, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=0
+T:9.014573s | ALERT [17] | Incident: 2026-10-22T02:22:43+1100 | Rank: 6 Coord: (1,2) | Ports Free: 1 | Neighbor Free: [T:2, B:0, L:2, R:2] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=0
+T:9.018079s | ALERT [18] | Incident: 2026-10-22T02:22:43+1100 | Rank: 10 Coord: (2,2) | Ports Free: 0 | Neighbor Free: [T:1, B:0, L:2, R:2] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:12.012977s | ALERT [19] | Incident: 2026-10-22T02:22:46+1100 | Rank: 13 Coord: (3,1) | Ports Free: 0 | Neighbor Free: [T:1, B:-2, L:2, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:12.016835s | ALERT [20] | Incident: 2026-10-22T02:22:46+1100 | Rank: 3 Coord: (0,3) | Ports Free: 2 | Neighbor Free: [T:-2, B:2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 1 (0,1) | recent-neighbour shortcut=0
+T:12.015307s | ALERT [21] | Incident: 2026-10-22T02:22:46+1100 | Rank: 12 Coord: (3,0) | Ports Free: 2 | Neighbor Free: [T:1, B:-2, L:-2, R:0] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:12.019875s | ALERT [22] | Incident: 2026-10-22T02:22:46+1100 | Rank: 8 Coord: (2,0) | Ports Free: 1 | Neighbor Free: [T:0, B:2, L:-2, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:15.015538s | ALERT [23] | Incident: 2026-10-22T02:22:49+1100 | Rank: 15 Coord: (3,3) | Ports Free: 2 | Neighbor Free: [T:2, B:-2, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:15.013991s | ALERT [24] | Incident: 2026-10-22T02:22:49+1100 | Rank: 2 Coord: (0,2) | Ports Free: 1 | Neighbor Free: [T:-2, B:2, L:2, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (0,0) | recent-neighbour shortcut=0
+T:15.018661s | ALERT [25] | Incident: 2026-10-22T02:22:49+1100 | Rank: 4 Coord: (1,0) | Ports Free: 2 | Neighbor Free: [T:1, B:1, L:-2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=0
+T:15.015513s | ALERT [26] | Incident: 2026-10-22T02:22:49+1100 | Rank: 1 Coord: (0,1) | Ports Free: 2 | Neighbor Free: [T:-2, B:2, L:1, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=0
+T:15.019199s | ALERT [27] | Incident: 2026-10-22T02:22:49+1100 | Rank: 12 Coord: (3,0) | Ports Free: 1 | Neighbor Free: [T:1, B:-2, L:-2, R:2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:15.019312s | ALERT [28] | Incident: 2026-10-22T02:22:49+1100 | Rank: 0 Coord: (0,0) | Ports Free: 1 | Neighbor Free: [T:-2, B:2, L:-2, R:2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:15.021572s | ALERT [29] | Incident: 2026-10-22T02:22:49+1100 | Rank: 14 Coord: (3,2) | Ports Free: 2 | Neighbor Free: [T:2, B:-2, L:2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=0
+T:21.023591s | ALERT [30] | Incident: 2026-10-22T02:22:55+1100 | Rank: 15 Coord: (3,3) | Ports Free: 2 | Neighbor Free: [T:1, B:-2, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 1 (1,3) | recent-neighbour shortcut=0
+T:21.024753s | ALERT [31] | Incident: 2026-10-22T02:22:55+1100 | Rank: 0 Coord: (0,0) | Ports Free: 1 | Neighbor Free: [T:-2, B:1, L:-2, R:1] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 3 (0,2) (1,1) (2,0) | recent-neighbour shortcut=0
+T:21.025376s | ALERT [32] | Incident: 2026-10-22T02:22:55+1100 | Rank: 14 Coord: (3,2) | Ports Free: 1 | Neighbor Free: [T:0, B:-2, L:0, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 3 (1,2) (2,1) (3,0) | recent-neighbour shortcut=0
+T:21.027604s | ALERT [33] | Incident: 2026-10-22T02:22:55+1100 | Rank: 7 Coord: (1,3) | Ports Free: 2 | Neighbor Free: [T:1, B:1, L:2, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (0,2) (1,1) | recent-neighbour shortcut=0
+T:21.030595s | ALERT [34] | Incident: 2026-10-22T02:22:55+1100 | Rank: 11 Coord: (2,3) | Ports Free: 1 | Neighbor Free: [T:2, B:2, L:0, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (2,1) | recent-neighbour shortcut=0
+T:21.036886s | ALERT [35] | Incident: 2026-10-22T02:22:55+1100 | Rank: 10 Coord: (2,2) | Ports Free: 0 | Neighbor Free: [T:2, B:1, L:1, R:1] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 3 (0,2) (1,1) (2,0) | recent-neighbour shortcut=0
+T:24.025129s | ALERT [36] | Incident: 2026-10-22T02:22:58+1100 | Rank: 13 Coord: (3,1) | Ports Free: 1 | Neighbor Free: [T:1, B:-2, L:2, R:2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 2 (1,1) (2,0) | recent-neighbour shortcut=0
+T:24.026981s | ALERT [37] | Incident: 2026-10-22T02:22:58+1100 | Rank: 15 Coord: (3,3) | Ports Free: 1 | Neighbor Free: [T:0, B:-2, L:2, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:24.024260s | ALERT [38] | Incident: 2026-10-22T02:22:58+1100 | Rank: 12 Coord: (3,0) | Ports Free: 2 | Neighbor Free: [T:0, B:-2, L:-2, R:1] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 1 (1,1) | recent-neighbour shortcut=0
+T:24.024784s | ALERT [39] | Incident: 2026-10-22T02:22:58+1100 | Rank: 2 Coord: (0,2) | Ports Free: 0 | Neighbor Free: [T:-2, B:0, L:1, R:0] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (1,1) | recent-neighbour shortcut=0
+T:24.028781s | ALERT [40] | Incident: 2026-10-22T02:22:58+1100 | Rank: 14 Coord: (3,2) | Ports Free: 2 | Neighbor Free: [T:0, B:-2, L:1, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:24.031319s | ALERT [41] | Incident: 2026-10-22T02:22:58+1100 | Rank: 3 Coord: (0,3) | Ports Free: 0 | Neighbor Free: [T:-2, B:2, L:0, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:24.031953s | ALERT [42] | Incident: 2026-10-22T02:22:58+1100 | Rank: 7 Coord: (1,3) | Ports Free: 2 | Neighbor Free: [T:0, B:0, L:0, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (1,1) | recent-neighbour shortcut=0
+T:24.034358s | ALERT [43] | Incident: 2026-10-22T02:22:58+1100 | Rank: 8 Coord: (2,0) | Ports Free: 0 | Neighbor Free: [T:2, B:2, L:-2, R:1] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 1 (1,1) | recent-neighbour shortcut=0
+T:24.034994s | ALERT [44] | Incident: 2026-10-22T02:22:58+1100 | Rank: 11 Coord: (2,3) | Ports Free: 0 | Neighbor Free: [T:2, B:1, L:0, R:-2] | Msgs: 6 | Msg Size: 24 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+T:24.040379s | ALERT [45] | Incident: 2026-10-22T02:22:58+1100 | Rank: 10 Coord: (2,2) | Ports Free: 0 | Neighbor Free: [T:0, B:2, L:1, R:0] | Msgs: 8 | Msg Size: 32 Bytes
+Recommended nodes: 1 (1,1) | recent-neighbour shortcut=0
+T:27.035343s | ALERT [46] | Incident: 2026-10-22T02:23:01+1100 | Rank: 3 Coord: (0,3) | Ports Free: 1 | Neighbor Free: [T:-2, B:1, L:1, R:-2] | Msgs: 4 | Msg Size: 16 Bytes
+Recommended nodes: 0 | recent-neighbour shortcut=1
+Total Simulation Time: 30.096581 seconds
+Total Congestion Alerts: 46
+Timing: local MPI function time and observed completion time; includes waiting/polling, not isolated one-way network latency.
+METRIC_FIELDS version rows cols tag sent received send_bytes receive_bytes send_call_time receive_call_time send_lifetime receive_lifetime
+METRIC 2 4 4 1 329 329 1316 1316 0.002730846 0.000300889 1.267835658 0.000300889
+METRIC 2 4 4 2 329 329 1316 1316 0.002107158 0.000102863 0.002107158 1.264670372
+METRIC 2 4 4 3 46 46 3680 3680 0.017757213 0.000040997 0.017757213 0.000040997
+METRIC 2 4 4 4 73 73 512 512 0.000701145 0.000061256 0.000701145 0.000061256
+METRIC 2 4 4 5 16 16 64 64 0.000100869 0.000007448 0.698438406 0.000007448
+METRIC 2 4 4 6 16 16 64 64 0.000317580 0.000014125 1.541438064 0.000014125
+METRIC 2 4 4 7 16 16 64 64 0.000205858 0.000004821 0.000205858 0.000004821
+METRIC 2 4 4 8 16 16 64 64 0.000286921 0.000008945 0.000286921 0.000008945
+Total Communication Events: 841 (completed point-to-point messages; collectives excluded)
+Shutdown confirmed: READY=16 TERMINATED=16
+[Node 13] Refer EV to neighbour (2,1), free=3
+[Node 3] Refer EV to neighbour (0,2), free=3
+[Node 8] Refer EV to neighbour (1,0), free=3
+[Node 15] Base recommends 3 node(s): (1,3) (2,2) (3,1) -> forward to EVs
+[Node 14] Base recommends 3 node(s): (1,2) (2,1) (3,0) -> forward to EVs
+[Node 0] Refer EV to neighbour (1,0), free=3
+[Node 5] Refer EV to neighbour (2,1), free=3
+[Node 1] Refer EV to neighbour (0,2), free=3
+[Node 10] Refer EV to neighbour (2,1), free=3
+[Node 6] Refer EV to neighbour (0,2), free=3
+[Node 7] Base recommends 2 node(s): (0,2) (1,1) -> forward to EVs
+[Node 11] Base recommends 1 node(s): (2,1) -> forward to EVs
+[Node 4] Refer EV to neighbour (2,0), free=5
+[Node 9] Refer EV to neighbour (3,1), free=3
+[Node 12] Refer EV to neighbour (3,1), free=3
+[Node 14] Refer EV to neighbour (3,1), free=3
+[Node 8] Refer EV to neighbour (1,0), free=3
+[Node 3] Base recommends 1 node(s): (0,1) -> forward to EVs
+[Node 0] Refer EV to neighbour (1,0), free=3
+[Node 7] Refer EV to neighbour (1,2), free=3
+[Node 11] Refer EV to neighbour (3,3), free=3
+[Node 10] Refer EV to neighbour (1,2), free=3
+[Node 5] Refer EV to neighbour (1,0), free=3
+[Node 1] Base recommends 2 node(s): (1,0) (2,1) -> forward to EVs
+[Node 2] Refer EV to neighbour (0,1), free=3
+[Node 13] Base recommends 1 node(s): (2,0) -> forward to EVs
+[Node 15] Base recommends 1 node(s): (2,0) -> forward to EVs
+[Node 4] Base recommends 1 node(s): (1,2) -> forward to EVs
+[Node 0] Refer EV to neighbour (0,1), free=3
+[Node 12] Base recommends 1 node(s): (2,2) -> forward to EVs
+[Node 3] Base recommends 1 node(s): (1,2) -> forward to EVs
+[Node 5] Refer EV to neighbour (0,1), free=3
+[Node 9] Base recommends 1 node(s): (1,2) -> forward to EVs
+[Node 14] Base recommends 1 node(s): (1,2) -> forward to EVs
+[Node 7] Base recommends 0 node(s): no available nodes nearby
+[Node 8] Base recommends 0 node(s): no available nodes nearby
+[Node 11] Base recommends 0 node(s): no available nodes nearby
+[Node 6] Base recommends 0 node(s): no available nodes nearby
+[Node 10] Base recommends 0 node(s): no available nodes nearby
+[Node 2] Refer EV to neighbour (1,2), free=3
+[Node 13] Base recommends 0 node(s): no available nodes nearby
+[Node 4] Refer EV to neighbour (0,0), free=3
+[Node 9] Refer EV to neighbour (1,1), free=3
+[Node 14] Refer EV to neighbour (2,2), free=3
+[Node 3] Base recommends 1 node(s): (0,1) -> forward to EVs
+[Node 11] Refer EV to neighbour (3,3), free=3
+[Node 12] Base recommends 0 node(s): no available nodes nearby
+[Node 7] Refer EV to neighbour (1,2), free=3
+[Node 8] Base recommends 0 node(s): no available nodes nearby
+[Node 13] Refer EV to neighbour (2,1), free=3
+[Node 15] Base recommends 0 node(s): no available nodes nearby
+[Node 2] Base recommends 1 node(s): (0,0) -> forward to EVs
+[Node 3] Refer EV to neighbour (1,3), free=3
+[Node 4] Base recommends 0 node(s): no available nodes nearby
+[Node 5] Refer EV to neighbour (2,1), free=3
+[Node 1] Base recommends 0 node(s): no available nodes nearby
+[Node 11] Refer EV to neighbour (1,3), free=3
+[Node 12] Base recommends 0 node(s): no available nodes nearby
+[Node 8] Refer EV to neighbour (2,1), free=3
+[Node 0] Base recommends 0 node(s): no available nodes nearby
+[Node 14] Base recommends 0 node(s): no available nodes nearby
+[Node 6] Refer EV to neighbour (1,3), free=3
+[Node 10] Refer EV to neighbour (2,1), free=3
+[Node 15] Refer EV to neighbour (3,2), free=3
+[Node 9] Refer EV to neighbour (1,1), free=4
+[Node 2] Refer EV to neighbour (0,3), free=3
+[Node 4] Refer EV to neighbour (0,0), free=4
+[Node 1] Refer EV to neighbour (1,1), free=4
+[Node 11] Refer EV to neighbour (1,3), free=3
+[Node 8] Refer EV to neighbour (3,0), free=3
+[Node 6] Refer EV to neighbour (1,1), free=4
+[Node 10] Refer EV to neighbour (3,2), free=3
+[Node 13] Refer EV to neighbour (3,0), free=3
+[Node 15] Base recommends 1 node(s): (1,3) -> forward to EVs
+[Node 9] Refer EV to neighbour (1,1), free=3
+[Node 3] Refer EV to neighbour (0,2), free=3
+[Node 4] Refer EV to neighbour (1,1), free=3
+[Node 0] Base recommends 3 node(s): (0,2) (1,1) (2,0) -> forward to EVs
+[Node 14] Base recommends 3 node(s): (1,2) (2,1) (3,0) -> forward to EVs
+[Node 1] Refer EV to neighbour (1,1), free=3
+[Node 8] Refer EV to neighbour (3,0), free=3
+[Node 7] Base recommends 2 node(s): (0,2) (1,1) -> forward to EVs
+[Node 11] Base recommends 1 node(s): (2,1) -> forward to EVs
+[Node 6] Refer EV to neighbour (0,2), free=3
+[Node 10] Base recommends 3 node(s): (0,2) (1,1) (2,0) -> forward to EVs
+[Node 13] Base recommends 2 node(s): (1,1) (2,0) -> forward to EVs
+[Node 15] Base recommends 0 node(s): no available nodes nearby
+[Node 9] Refer EV to neighbour (1,1), free=4
+[Node 12] Base recommends 1 node(s): (1,1) -> forward to EVs
+[Node 2] Base recommends 1 node(s): (1,1) -> forward to EVs
+[Node 4] Refer EV to neighbour (1,1), free=4
+[Node 14] Base recommends 0 node(s): no available nodes nearby
+[Node 3] Base recommends 0 node(s): no available nodes nearby
+[Node 1] Refer EV to neighbour (1,1), free=4
+[Node 7] Base recommends 1 node(s): (1,1) -> forward to EVs
+[Node 8] Base recommends 1 node(s): (1,1) -> forward to EVs
+[Node 6] Refer EV to neighbour (1,1), free=4
+[Node 11] Base recommends 0 node(s): no available nodes nearby
+[Node 10] Base recommends 1 node(s): (1,1) -> forward to EVs
+[Node 2] Refer EV to neighbour (1,2), free=3
+[Node 12] Refer EV to neighbour (3,1), free=4
+[Node 0] Refer EV to neighbour (0,1), free=3
+[Node 14] Refer EV to neighbour (3,1), free=4
+[Node 4] Refer EV to neighbour (1,1), free=3
+[Node 3] Base recommends 0 node(s): no available nodes nearby
+[Node 7] Refer EV to neighbour (1,2), free=3
+[Node 8] Refer EV to neighbour (2,1), free=3
+[Node 11] Refer EV to neighbour (3,3), free=3
+[Node 10] Refer EV to neighbour (1,2), free=3
+[Node 5] Refer EV to neighbour (0,1), free=3
+[Charging Nodes Average] Overall: 30.0697s | Comm: 0.0015s | Comp: 0.000096561s
+[Base Station] Overall: 30.0977s | Comm: 0.0012s | Comp: 0.000049415s
+srun: Warning: can't honor --ntasks-per-node set to 8 which doesn't match the requested tasks 17 with the number of requested nodes 3. Ignoring --ntasks-per-node.

@@ -1,0 +1,8 @@
+version=v2
+rows=4
+cols=4
+periods_seconds=1.5 3 6
+repetitions=1
+cpus_per_task=2
+omp_threads_per_station=7
+job_id=198039

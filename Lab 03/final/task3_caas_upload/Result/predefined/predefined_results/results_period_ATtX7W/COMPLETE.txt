@@ -1,0 +1,1 @@
+COMPLETE: V2, 4x4 mesh, periods 1.5 / 3 / 6 seconds; 3 validated simulations.

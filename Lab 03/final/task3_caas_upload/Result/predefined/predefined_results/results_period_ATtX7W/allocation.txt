@@ -1,0 +1,28 @@
+JobId=198039 JobName=ev_period_test
+   UserId=nobody(882509) GroupId=nobody(1121) MCS_label=N/A
+   Priority=4294759871 Nice=0 Account=(null) QOS=normal
+   JobState=RUNNING Reason=None Dependency=(null)
+   Requeue=1 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0
+   RunTime=00:00:01 TimeLimit=00:05:00 TimeMin=N/A
+   SubmitTime=2026-10-22T02:15:37 EligibleTime=2026-10-22T02:15:37
+   AccrueTime=2026-10-22T02:15:37
+   StartTime=2026-10-22T02:21:27 EndTime=2026-10-22T02:26:27 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-22T02:21:27 Scheduler=Backfill
+   Partition=defq AllocNode:Sid=student-caas-headnode:3935881
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=student-caas-n[03-05]
+   BatchHost=student-caas-n03
+   NumNodes=3 NumCPUs=48 NumTasks=24 CPUs/Task=2 ReqB:S:C:T=0:0:*:*
+   TRES=cpu=48,mem=4800M,node=3,billing=48
+   Socks/Node=* NtasksPerN:B:S:C=8:0:*:* CoreSpec=*
+   MinCPUsNode=16 MinMemoryCPU=100M MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=OK Contiguous=0 Licenses=(null) Network=(null)
+   Command=/srv/home/sshe0113/lab03/predefined/run_predefined_period.slurm
+   WorkDir=/srv/home/sshe0113/lab03/predefined
+   StdErr=/srv/home/sshe0113/lab03/predefined/ev-period-198039.out
+   StdIn=/dev/null
+   StdOut=/srv/home/sshe0113/lab03/predefined/ev-period-198039.out
+   Power=
+   
+

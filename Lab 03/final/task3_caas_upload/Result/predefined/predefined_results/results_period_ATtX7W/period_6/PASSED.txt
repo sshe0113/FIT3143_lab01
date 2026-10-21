@@ -1,0 +1,5 @@
+exit=0
+predefined_period=6
+READY=16
+TERMINATED=16
+message_counts_and_bytes=balanced
