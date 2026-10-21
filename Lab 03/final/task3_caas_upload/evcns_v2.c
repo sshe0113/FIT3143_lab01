@@ -28,6 +28,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
     MPI_Type_size(report_type, &report_bytes);
     CreateGrid(comm, nrows, ncols, &comm2D, coord, neighbors);
     srand(time(NULL) + rank);
+
     /**
      * ### OpenMP Thread Initialization
      * Sets up the initial port states and spawns a designated number of OpenMP threads to execute concurrent tasks. 
@@ -47,6 +48,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
         // One thread checks the team size; the same value applies to every thread.
         if (thread_id == 0 && omp_get_num_threads() != NUM_PORTS + 1) MPI_Abort(world_comm, EXIT_FAILURE);
         double comp_time = 0.0;
+        
         /**
          * ### Port State Simulation (Worker Threads)
          * These worker threads asynchronously simulate real-world electric vehicle behavior by randomly 

@@ -28,6 +28,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
     MPI_Type_size(report_type, &report_bytes);
     CreateGrid(comm, nrows, ncols, &comm2D, coord, neighbors);
     srand(time(NULL) + rank);
+
     /**
      * ### OpenMP Thread Initialization
      * Sets up the initial port states and spawns a designated number of OpenMP threads to execute concurrent tasks. 
@@ -47,6 +48,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
         // One thread checks the team size; the same value applies to every thread.
         if (thread_id == 0 && omp_get_num_threads() != NUM_PORTS + 1) MPI_Abort(world_comm, EXIT_FAILURE);
         double comp_time = 0.0;
+        
         /**
          * ### Port State Simulation (Worker Threads)
          * These worker threads asynchronously simulate real-world electric vehicle behavior by randomly 
@@ -96,9 +98,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                             elapsed = MPI_Wtime() - start;
                             TrackReceiveMetric(MSG_BS_REPLY, 1, count*2*sizeof(int), elapsed, elapsed);
                         }
-                        double comp_s = MPI_Wtime();
                         ShowReferral(rank, count, coords);
-                        comp_time += MPI_Wtime() - comp_s;
                         awaiting_base = false;
 
                     /**
@@ -127,9 +127,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                  * charging capacity while ensuring it can still interleave incoming requests while waiting for responses.
                  */
                 if (!disabled && !awaiting_base && MPI_Wtime() - last_check >= CHECK_PERIOD) {
-                    double comp_s = MPI_Wtime();
-                    int available = AvailablePorts(ports);
-                    comp_time += MPI_Wtime() - comp_s;
+                    int available = AvailablePorts(ports, &comp_time);
                     if (available <= THRESHOLD) {
                         int avail_neigh[4] = {NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR};
                         MPI_Request sends[4], receives[4];
@@ -166,10 +164,10 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                             for (int i = 0; i < degree; i++)
                                 TrackSendMetric(MSG_REQ_NEIGHBOR, 1, sizeof(int), 0, completed - send_started[i]);
                         }
-                        comp_s = MPI_Wtime();
+                        double comp_s = ComputationTime();
                         bool all_full = true;
                         for (int i = 0; i < 4; i++) if (avail_neigh[i] > THRESHOLD) all_full = false;
-                        comp_time += MPI_Wtime() - comp_s;
+                        comp_time += ComputationTime() - comp_s;
 
                         /**
                          * ### Main Thread: Congestion Reporting & Local Referral
@@ -179,10 +177,8 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                          * directly invokes a local referral to redirect the EV traffic.
                          */
                         if (all_full) {
-                            comp_s = MPI_Wtime();
                             MsgData report;
-                            BuildReport(&report, rank, coord, available, avail_neigh, degree, start_time);
-                            comp_time += MPI_Wtime() - comp_s;
+                            BuildReport(&report, rank, coord, available, avail_neigh, degree, start_time, &comp_time);
                             
                             double start = MPI_Wtime();
                             MPI_Send(&report, 1, report_type, size-1, MSG_REPORT, world_comm);
@@ -190,9 +186,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                             TrackSendMetric(MSG_REPORT, 1, report_bytes, elapsed, elapsed);
                             awaiting_base = true;
                         } else {
-                            comp_s = MPI_Wtime();
-                            LocalReferral(rank, coord, avail_neigh);
-                            comp_time += MPI_Wtime() - comp_s;
+                            LocalReferral(rank, coord, avail_neigh, &comp_time);
                         }
                     }
                     last_check = MPI_Wtime();

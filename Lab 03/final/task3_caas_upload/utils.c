@@ -4,7 +4,32 @@
  */
 #include "utils.h"
 
-/* CPU seconds used by the calling thread; sleep and descheduling are excluded. */
+// Initialize globals
+const double SIMULATION_SEC = 30.0;
+const double PORT_PERIOD = 2.0;
+const double CHECK_PERIOD = 3.0;
+const int CONGEST_RATE = 70;
+double PRED_PERIOD = 1.5;
+MsgMetrics message_metrics[11];
+
+/**
+ * @brief Retrieves the precise CPU execution time consumed by the calling thread.
+ *
+ * @details
+ * ### What it is:
+ * A high-precision timing wrapper that leverages the POSIX `clock_gettime` system call alongside the `CLOCK_THREAD_CPUTIME_ID` macro. 
+ * It calculates the CPU seconds used exclusively by the calling thread, returning the value as a double-precision float. 
+ * Sleep periods, network waits, and OS descheduling overhead are strictly excluded from this measurement. 
+ * If the system clock retrieval fails, it catches the error and safely aborts the MPI environment to prevent data corruption.
+ * 
+ * ### What it is used for:
+ * It is used to cleanly isolate pure algorithmic processing time from absolute wall-clock time. 
+ * In highly concurrent architectures where threads frequently yield the CPU (via `usleep`) or spin-wait on asynchronous network 
+ * events (via `MPI_Test`), standard timers like `MPI_Wtime()` would falsely record those waiting periods as computational load. 
+ * By bracketing specific business logic (such as checking port availability or executing the Diamond Scanning algorithm) with 
+ * this function, the simulation accurately aggregates the exact hardware compute overhead required to mathematically justify 
+ * the architectural improvements in Task 3.
+ */
 double ComputationTime(void) {
     struct timespec value;
     if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &value) != 0) {
@@ -14,14 +39,6 @@ double ComputationTime(void) {
     }
     return (double)value.tv_sec + (double)value.tv_nsec / 1e9;
 }
-
-// Initialize globals
-const double SIMULATION_SEC = 30.0;
-const double PORT_PERIOD = 2.0;
-const double CHECK_PERIOD = 3.0;
-const int CONGEST_RATE = 70;
-double PRED_PERIOD = 1.5;
-MsgMetrics message_metrics[11];
 
 /**
  * @brief Safely parses a string into a long integer with strict boundary validation.
@@ -155,8 +172,13 @@ void CreateDataType(MPI_Datatype *report_type) {
 }
 
 /**
- * ### MPI Setup and Topology Creation
+ * @brief MPI Setup and Topology Creation
+ * 
+ * @details
+ * ### What it is:
  * Initializes the MPI environment variables and constructs a 2D Cartesian grid topology for the charging nodes. 
+ * 
+ * ### What it is used for:
  * It is used to establish the spatial relationships between nodes, identifying the immediate top, bottom, left, and right 
  * neighbors required for localized communication.
  */
@@ -173,9 +195,14 @@ void CreateGrid(MPI_Comm comm, int nrows, int ncols, MPI_Comm *comm2D,
 }
 
 /**
- * ### Port State Simulation (Worker Threads)
+ * @brief Port State Simulation (Worker Threads)
+ * 
+ * @details
+ * ### What it is:
  * These worker threads asynchronously simulate real-world electric vehicle behavior by randomly 
  * toggling the availability of individual charging ports based on a predefined probability.
+ * 
+ * ### What it is used for:
  * This mechanism is used to generate dynamic, independent load fluctuations across the charging 
  * network without blocking the node's main communication thread.
  */
