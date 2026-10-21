@@ -73,8 +73,6 @@ def main():
     ax.grid(axis="y", alpha=0.25)
     ax.spines[["top", "right"]].set_visible(False)
     ax.legend(ncol=3, frameon=False, loc="upper left")
-    fig.text(0.5, 0.025, "Log scale: each major tick is 10x. One run per grid/version.\nMPI call time is not end-to-end message latency.",
-             ha="center", fontsize=9, color="#555555")
     fig.tight_layout(rect=(0, 0.10, 1, 1))
     fig.savefig(output / "comm_comparison.png", dpi=300, bbox_inches="tight")
     fig.savefig(output / "comm_comparison.pdf", bbox_inches="tight")
