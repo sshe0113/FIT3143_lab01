@@ -186,7 +186,6 @@ void SimulatePort(int thread_id, int ports[NUM_PORTS], bool *running_flag) {
             }
             last_update = MPI_Wtime();
         }
-
         usleep(1000);
     }
 }
@@ -572,7 +571,7 @@ void WriteMetrics(int rows, int cols, int version) {
         times[tag-1][3] = m->receive_lifetime;
     }
 
-    // Updated: 40 values = 10 tags * 4 counters; the base is world rank size - 1.
+    // 40 values = 10 tags * 4 counters; the base is world rank size - 1.
     MPI_Reduce(counts, sums, 40, MPI_LONG_LONG_INT, MPI_SUM, size-1, MPI_COMM_WORLD);
     MPI_Reduce(times, totals, 40, MPI_DOUBLE, MPI_SUM, size-1, MPI_COMM_WORLD);
     if (rank == size-1) {

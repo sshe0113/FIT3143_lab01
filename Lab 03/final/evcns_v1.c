@@ -11,7 +11,7 @@
 #include "utils.h"
 
 //===========================================
-// EV Charging Node (Version 1: Scheduled Blocking)
+// EV Charging Node
 //===========================================
 void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datatype report_type) {
     /**
@@ -57,11 +57,9 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
         } else {
             /**
              * ### Main Thread: Centralized Scheduling Loop Setup
-             * New.
-             * ### What it is:
              * Initializes the control signal and flags for the blocking architecture.
-             * ### What it is used for:
-             * It prepares the main thread to constantly poll for termination commands or incoming inquiries while awaiting its scheduled turn from the Base Station.
+             * It prepares the main thread to constantly poll for termination commands or 
+             * incoming inquiries while awaiting its scheduled turn from the Base Station.
              */
             int signal = 1;
             bool ready_sent = false;
@@ -85,8 +83,8 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                 TrackReceiveMetric(status.MPI_TAG, 1, sizeof(int), elapsed, elapsed);
                 if (status.MPI_TAG == MSG_TERMINATE) break;
 
-                /* Updated: DISABLE stops new work and port updates; READY confirms own
-                 * enquiry completion. Continue answering neighbours until TERMINATE. */
+                // DISABLE stops new work and port updates; READY confirms own
+                // enquiry completion. Continue answering neighbours until TERMINATE.
                 if (status.MPI_TAG == MSG_DISABLE) {
                     #pragma omp atomic write
                     running_flag = false;
@@ -99,11 +97,9 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
 
                     /**
                      * ### Main Thread: Scheduled Congestion Checking & Neighbor Polling
-                     * New.
-                     * ### What it is:
                      * A token-based execution block triggered only when receiving a MSG_QUERY_GRANT from the Base Station. 
-                     * ### What it is used for:
-                     * It ensures strictly serialized local congestion checking, forcing the node to execute blocking MPI_Send and MPI_Recv sequentially to all neighbors, replacing parallel probing.
+                     * It ensures strictly serialized local congestion checking, forcing the node to execute blocking MPI_Send 
+                     * and MPI_Recv sequentially to all neighbors, replacing parallel probing.
                      */
                     int available = AvailablePorts(ports);
                     if (available <= THRESHOLD) {
@@ -142,11 +138,10 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
 
                             /**
                              * ### Main Thread: Base Station Recommendation Handling
-                             * New.
-                             * ### What it is:
-                             * Directly executes a blocking MPI_Recv to fetch the Base Station's fallback routing list immediately after sending the report.
-                             * ### What it is used for:
-                             * It guarantees the entire congestion evaluation pipeline is completely resolved before releasing the node's scheduled execution turn.
+                             * Directly executes a blocking MPI_Recv to fetch the Base Station's 
+                             * fallback routing list immediately after sending the report.
+                             * It guarantees the entire congestion evaluation pipeline is completely 
+                             * resolved before releasing the node's scheduled execution turn.
                              */
                             int count, coords[2*(size-1)];
                             start = MPI_Wtime();
@@ -169,11 +164,9 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
 
                     /**
                      * ### Main Thread: Completion Handshake
-                     * New.
-                     * ### What it is:
                      * A synchronous notification back to the Base Station signaling the end of the node's granted window.
-                     * ### What it is used for:
-                     * It releases the global lock, instructing the Base Station to assign the MSG_QUERY_GRANT token to the next node in the round-robin sequence.
+                     * It releases the global lock, instructing the Base Station to assign the MSG_QUERY_GRANT token to 
+                     * the next node in the round-robin sequence.
                      */
                     MPI_Send(&signal, 1, MPI_INT, size-1, MSG_QUERY_DONE, world_comm);
                     elapsed = MPI_Wtime() - start;
@@ -193,7 +186,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
 }
 
 //===========================================
-// Base Station (Version 1: Scheduled Blocking)
+// Base Station
 //===========================================
 void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_type) {
     /**
@@ -278,11 +271,10 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
                 int peer = status.MPI_SOURCE;
                 /**
                  * ### Base Station: Query Completion Verification
-                 * New.
-                 * ### What it is:
-                 * Retrieves the MSG_QUERY_DONE validation flag and systematically advances the authorization pointer to the next charging node.
-                 * ### What it is used for:
-                 * It securely revokes the current lock and cascades the polling operation through the grid topology until every node has been checked.
+                 * Retrieves the MSG_QUERY_DONE validation flag and systematically 
+                 * advances the authorization pointer to the next charging node.
+                 * It securely revokes the current lock and cascades the polling operation 
+                 * through the grid topology until every node has been checked.
                  */
                 if (status.MPI_TAG == MSG_QUERY_DONE && peer == active) active = -1;
                 else if (status.MPI_TAG == MSG_READY && !ready_seen[peer]) {
@@ -296,8 +288,8 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
         }
         double now = MPI_Wtime();
 
-        /* Updated: finish the granted enquiry before DISABLE. Wait for every READY,
-         * send TERMINATE, then wait for every TERMINATED instead of a timed drain. */
+        // Finish the granted enquiry before DISABLE. Wait for every READY,
+        // send TERMINATE, then wait for every TERMINATED instead of a timed drain.
         if (!disabling && active < 0 && now - base.start_time >= SIMULATION_SEC) {
             disabling = true;
             for (int i = 0; i < stations; i++) {
@@ -310,11 +302,9 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
 
         /**
          * ### Base Station: Token Dispenser
-         * New.
-         * ### What it is:
          * Evaluates timing constraints to emit the MSG_QUERY_GRANT token to the next node in line.
-         * ### What it is used for:
-         * It drives the centralized operation loop, granting individual polling permissions strictly after completing the minimum delay bounds.
+         * It drives the centralized operation loop, granting individual polling permissions strictly 
+         * after completing the minimum delay bounds.
          */
         if (!disabling && active < 0 && (next != 0 || now >= next_round)) {
             if (next == 0) next_round = now + CHECK_PERIOD;
@@ -354,11 +344,13 @@ int main(int argc, char **argv) {
 
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &permission);
     if (permission < MPI_THREAD_MULTIPLE) MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
     // Retrieves the process count and strictly validates the command-line arguments to 
     // ensure the specified 2D grid dimensions exactly match the number of available charging nodes.
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     ReadArguments(argc, argv, size, &nrows, &ncols);
+
     // Registers a custom MPI datatype for congestion reports and splits the global communicator 
     // to logically isolate the Base Station from the interconnected charging nodes.
     MPI_Datatype report_type;
@@ -366,6 +358,7 @@ int main(int argc, char **argv) {
     MPI_Comm new_comm;
 
     MPI_Comm_split(MPI_COMM_WORLD, rank == size-1, 0, &new_comm);
+    
     // This conditional logic assigns the highest MPI rank to act as the centralized Base Station (MasterIO) 
     // and directs all other ranks to operate as EV charging nodes (SlaveIO).
     if (rank == size-1) MasterIO(MPI_COMM_WORLD, nrows, ncols, report_type);

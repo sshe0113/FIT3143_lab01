@@ -41,7 +41,7 @@ typedef struct {
  *
  * @param request Pointer to the MPI_Request handle to test.
  * @return True only for a newly completed active request; false if inactive or pending.
- * Updated: test for NULL before MPI_Test. On completion MPI_Test clears the
+ * Test for NULL before MPI_Test. On completion MPI_Test clears the
  * ordinary request, so a later non-NULL condition would skip its received payload.
  */
 static bool Complete(MPI_Request *request) {
@@ -69,6 +69,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
     MPI_Type_size(report_type, &report_bytes);
     CreateGrid(comm, nrows, ncols, &comm2D, coord, neighbors);
     srand(time(NULL) + rank);
+
     /**
      * ### OpenMP Thread Initialization
      * Sets up the initial port states and spawns a designated number of OpenMP threads to execute concurrent tasks. 
@@ -86,6 +87,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
         int thread_id = omp_get_thread_num();
         // One thread checks the team size; the same value applies to every thread.
         if (thread_id == 0 && omp_get_num_threads() != NUM_PORTS + 1) MPI_Abort(world_comm, EXIT_FAILURE);
+
         /**
          * ### Port State Simulation (Worker Threads)
          * These worker threads asynchronously simulate real-world electric vehicle behavior by randomly 
@@ -154,8 +156,8 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                     if (Complete(&answering[i]))
                         TrackSendMetric(MSG_RES_NEIGHBOR, 1, sizeof(int), 0, MPI_Wtime() - answering_start[i]);
 
-                    /* Updated: probe before posting, and reuse this direction's reply buffer
-                     * only after its previous send completes. No idle receive needs cancellation. */
+                    // Probe before posting, and reuse this direction's reply buffer
+                    // only after its previous send completes. No idle receive needs cancellation.
                     if (incoming[i] == MPI_REQUEST_NULL && answering[i] == MPI_REQUEST_NULL) {
                         MPI_Iprobe(neighbors[i], MSG_REQ_NEIGHBOR, comm2D, &flag, MPI_STATUS_IGNORE);
                         if (flag) {
@@ -193,6 +195,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                         querying = false;
                         bool all_full = true;
                         for (int i = 0; i < 4; i++) if (avail_neigh[i] > THRESHOLD) all_full = false;
+
                         /**
                          * ### Main Thread: Congestion Reporting & Local Referral
                          * Evaluates neighbor replies and either executes a local EV referral or triggers 
@@ -202,7 +205,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                          */
                         if (all_full) {
 
-                            // Updated: report the original congestion snapshot and actual neighbour count.
+                            // Report the original congestion snapshot and actual neighbour count.
                             BuildReport(&report, rank, coord, available, avail_neigh, degree, start_time);
                             base_start = MPI_Wtime();
                             MPI_Irecv(&count, 1, MPI_INT, size-1, MSG_BS_REPLY, world_comm, &base_receive);
@@ -305,7 +308,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
         }
     }
 
-    // Updated: workers have joined and outstanding enquiries are complete before the cleanup ACK.
+    // Workers have joined and outstanding enquiries are complete before the cleanup ACK.
     MPI_Comm_free(&comm2D);
     int signal = 1;
     MPI_Request ack;
@@ -344,6 +347,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
         p->disable_send = p->terminate_send = MPI_REQUEST_NULL;
     }
     BaseState base;
+
     /**
      * ### Initialization of Global State Matrix and Log Files
      * This section initializes the global 2D matrix representing port availability and prepares the main simulation log file. 
@@ -351,6 +355,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
      * the main loop begins.
      */
     BaseOpen(&base, nrows, ncols, 3);
+
     /**
      * ### Simulated Timeout Detection and Shutdown Signaling Broadcast
      * Monitors the elapsed simulation time and dispatches non-blocking MSG_DISABLE and MSG_TERMINATE commands to all nodes.
@@ -404,7 +409,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
                 }
             }
 
-            // Updated: process the completed payload now; the request is already NULL.
+            // Process the completed payload now; the request is already NULL.
             if (Complete(&p->incoming)) {
                 int tag = p->incoming_tag;
                 TrackReceiveMetric(tag, 1, tag == MSG_REPORT ? report_bytes : (int)sizeof(int),
@@ -412,6 +417,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
                 if (tag == MSG_REPORT && !p->ready_seen) {
                     p->count = ProcessReport(&base, &p->report, p->coords);
                     p->count_start = MPI_Wtime();
+
                     /**
                      * ### Sending Dispatch Responses and Grid Status Records
                      * Triggers non-blocking MSG_BS_REPLY sends containing the optimal alternative 
@@ -475,11 +481,13 @@ int main(int argc, char **argv) {
 
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &permission);
     if (permission < MPI_THREAD_MULTIPLE) MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
     // Retrieves the process count and strictly validates the command-line arguments to 
     // ensure the specified 2D grid dimensions exactly match the number of available charging nodes.
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     ReadArguments(argc, argv, size, &nrows, &ncols);
+
     // Registers a custom MPI datatype for congestion reports and splits the global communicator 
     // to logically isolate the Base Station from the interconnected charging nodes.
     MPI_Datatype report_type;
@@ -487,6 +495,7 @@ int main(int argc, char **argv) {
     MPI_Comm new_comm;
 
     MPI_Comm_split(MPI_COMM_WORLD, rank == size-1, 0, &new_comm);
+
     // This conditional logic assigns the highest MPI rank to act as the centralized Base Station (MasterIO) 
     // and directs all other ranks to operate as EV charging nodes (SlaveIO) utilizing the fully asynchronous logic.
     if (rank == size-1) MasterIO(MPI_COMM_WORLD, nrows, ncols, report_type);

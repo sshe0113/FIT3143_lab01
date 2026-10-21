@@ -45,6 +45,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
         int thread_id = omp_get_thread_num();
         // One thread checks the team size; the same value applies to every thread.
         if (thread_id == 0 && omp_get_num_threads() != NUM_PORTS + 1) MPI_Abort(world_comm, EXIT_FAILURE);
+
         /**
          * ### Port State Simulation (Worker Threads)
          * These worker threads asynchronously simulate real-world electric vehicle behavior by randomly 
@@ -96,6 +97,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                         }
                         ShowReferral(rank, count, coords);
                         awaiting_base = false;
+
                     /**
                      * ### Main Thread: Disable Signal Handling
                      * Continuously polls for a globally broadcasted MSG_DISABLE signal originating from the Base Station. 
@@ -200,7 +202,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
         }
     }
 
-    // Updated: workers have joined and outstanding enquiries are complete before the cleanup ACK.
+    // Workers have joined and outstanding enquiries are complete before the cleanup ACK.
     MPI_Comm_free(&comm2D);
     int signal = 1;
     double start = MPI_Wtime();
@@ -230,16 +232,18 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
     for (int i = 0; i < stations; i++) ready_seen[i] = ack_seen[i] = false;
     for (int i = 0; i < 2*stations; i++) controls[i] = MPI_REQUEST_NULL;
     BaseState base;
+
     /**
      * ### Initialization of Global State Matrix and Log Files
-     * This section initializes the global 2D matrix representing port availability and prepares the main simulation log file. 
+     * Initializes the global 2D matrix representing port availability and prepares the main simulation log file. 
      * It acts as the central state registry to track recent congestion events and records the initial configuration parameters 
      * before the main loop begins.
      */
     BaseOpen(&base, nrows, ncols, 2);
+
     /**
      * ### Message Listening and Termination Signal Handshake
-     * This block actively probes the network for incoming messages and 
+     * Actively probes the network for incoming messages and 
      * processes the graceful shutdown handshake signals from slave nodes. 
      * It is used to securely tally which charging nodes have ceased operations 
      * and acknowledged the termination protocol to prevent system deadlocks.
@@ -250,6 +254,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
         MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, world_comm, &flag, &status);
         if (flag) {
             double start = MPI_Wtime();
+
             /**
              * ### Congestion Report Receipt and Status Updates
              * Intercepts congestion alerts, updates the central grid state, and validates 
@@ -265,6 +270,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
                 int coords[2*stations];
                 int count = ProcessReport(&base, &report, coords);
                 start = MPI_Wtime();
+
                 /**
                  * ### Sending Dispatch Responses and Grid Status Records
                  * Transmits the discovered alternative coordinates back to the reporting node 
@@ -282,7 +288,6 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
                     TrackSendMetric(MSG_BS_REPLY, 1, count*2*sizeof(int), elapsed, elapsed);
                 }
             } else {
-
                 // Keep incoming control values separate from the active Isend signal buffer.
                 int value;
                 MPI_Recv(&value, 1, MPI_INT, status.MPI_SOURCE, status.MPI_TAG, world_comm, MPI_STATUS_IGNORE);
@@ -294,6 +299,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
                 else MPI_Abort(world_comm, EXIT_FAILURE);
             }
         }
+
         /**
          * ### Simulated Timeout Detection and Shutdown Signaling Broadcast
          * Monitors the total elapsed simulation time and broadcasts sequential 
@@ -344,11 +350,13 @@ int main(int argc, char **argv) {
 
     MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &permission);
     if (permission < MPI_THREAD_MULTIPLE) MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
     // Retrieves the process count and strictly validates the command-line arguments to 
     // ensure the specified 2D grid dimensions exactly match the number of available charging nodes.
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     ReadArguments(argc, argv, size, &nrows, &ncols);
+
     // Registers a custom MPI datatype for congestion reports and splits the global communicator 
     // to logically isolate the Base Station from the interconnected charging nodes.
     MPI_Datatype report_type;
@@ -356,6 +364,7 @@ int main(int argc, char **argv) {
     MPI_Comm new_comm;
 
     MPI_Comm_split(MPI_COMM_WORLD, rank == size-1, 0, &new_comm);
+    
     // This conditional logic assigns the highest MPI rank to act as the centralized Base Station (MasterIO) 
     // and directs all other ranks to operate as EV charging nodes (SlaveIO).
     if (rank == size-1) MasterIO(MPI_COMM_WORLD, nrows, ncols, report_type);
