@@ -13,6 +13,34 @@ double PRED_PERIOD = 1.5;
 MsgMetrics message_metrics[11];
 
 /**
+ * @brief Retrieves the precise CPU execution time consumed by the calling thread.
+ *
+ * @details
+ * ### What it is:
+ * A high-precision timing wrapper that leverages the POSIX `clock_gettime` system call alongside the `CLOCK_THREAD_CPUTIME_ID` macro. 
+ * It calculates the CPU seconds used exclusively by the calling thread, returning the value as a double-precision float. 
+ * Sleep periods, network waits, and OS descheduling overhead are strictly excluded from this measurement. 
+ * If the system clock retrieval fails, it catches the error and safely aborts the MPI environment to prevent data corruption.
+ * 
+ * ### What it is used for:
+ * It is used to cleanly isolate pure algorithmic processing time from absolute wall-clock time. 
+ * In highly concurrent architectures where threads frequently yield the CPU (via `usleep`) or spin-wait on asynchronous network 
+ * events (via `MPI_Test`), standard timers like `MPI_Wtime()` would falsely record those waiting periods as computational load. 
+ * By bracketing specific business logic (such as checking port availability or executing the Diamond Scanning algorithm) with 
+ * this function, the simulation accurately aggregates the exact hardware compute overhead required to mathematically justify 
+ * the architectural improvements in Task 3.
+ */
+double ComputationTime(void) {
+    struct timespec value;
+    if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &value) != 0) {
+        perror("clock_gettime");
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        exit(EXIT_FAILURE);
+    }
+    return (double)value.tv_sec + (double)value.tv_nsec / 1e9;
+}
+
+/**
  * @brief Safely parses a string into a long integer with strict boundary validation.
  *
  * @details
@@ -144,8 +172,13 @@ void CreateDataType(MPI_Datatype *report_type) {
 }
 
 /**
- * ### MPI Setup and Topology Creation
+ * @brief MPI Setup and Topology Creation
+ * 
+ * @details
+ * ### What it is:
  * Initializes the MPI environment variables and constructs a 2D Cartesian grid topology for the charging nodes. 
+ * 
+ * ### What it is used for:
  * It is used to establish the spatial relationships between nodes, identifying the immediate top, bottom, left, and right 
  * neighbors required for localized communication.
  */
@@ -162,9 +195,14 @@ void CreateGrid(MPI_Comm comm, int nrows, int ncols, MPI_Comm *comm2D,
 }
 
 /**
- * ### Port State Simulation (Worker Threads)
+ * @brief Port State Simulation (Worker Threads)
+ * 
+ * @details
+ * ### What it is:
  * These worker threads asynchronously simulate real-world electric vehicle behavior by randomly 
  * toggling the availability of individual charging ports based on a predefined probability.
+ * 
+ * ### What it is used for:
  * This mechanism is used to generate dynamic, independent load fluctuations across the charging 
  * network without blocking the node's main communication thread.
  */
@@ -178,14 +216,14 @@ void SimulatePort(int thread_id, int ports[NUM_PORTS], bool *running_flag, doubl
         if (!running) break;
         // Every two seconds perform once (random change a port status)
         if (MPI_Wtime() - last_update >= PORT_PERIOD) {
-            double c_start = MPI_Wtime();
             // Mutex lock
             #pragma omp critical
             {
+                double c_start = ComputationTime();
                 // Default: 70% busy / 30% free
                 ports[thread_id] = rand() % 100 < CONGEST_RATE ? 0 : 1;
+                *comp_time += ComputationTime() - c_start;
             }
-            *comp_time += MPI_Wtime() - c_start;
             last_update = MPI_Wtime();
         }
         usleep(1000);
@@ -199,12 +237,14 @@ void SimulatePort(int thread_id, int ports[NUM_PORTS], bool *running_flag, doubl
  * The same unnamed critical region as SimulatePort prevents any port write while
  * the whole array is being summed. It does not reserve or consume a port.
  */
-int AvailablePorts(int ports[NUM_PORTS]) {
+int AvailablePorts(int ports[NUM_PORTS], double *comp_time) {
     int available = 0;
     /* Same unnamed critical region as port writes: sum a consistent snapshot. */
     #pragma omp critical
     {
+        double c_start = ComputationTime();
         for (int i = 0; i < NUM_PORTS; i++) available += ports[i];
+        *comp_time += ComputationTime() - c_start;
     }
     return available;
 }
@@ -252,11 +292,14 @@ void IncidentDateTime(char text[32]) {
  * The own snapshot is retained even if port workers change it during the enquiry.
  */
 void BuildReport(MsgData *report, int rank, const int coord[2], int available,
-                 const int avail_neigh[4], int degree, double start_time) {
-    *report = (MsgData){.timestamp = MPI_Wtime() - start_time, .sender_rank = rank,
+                 const int avail_neigh[4], int degree, double start_time, double *comp_time) {
+    double timestamp = MPI_Wtime() - start_time;
+    double c_start = ComputationTime();
+    *report = (MsgData){.timestamp = timestamp, .sender_rank = rank,
         .coords = {coord[0], coord[1]}, .avail_ports = available,
         .msg_exchanged = degree * 2, .msg_size = degree * 2 * (int)sizeof(int)};
     for (int i = 0; i < 4; i++) report->avail_neigh[i] = avail_neigh[i];
+    *comp_time += ComputationTime() - c_start;
     IncidentDateTime(report->incident_time);
 }
 
@@ -281,11 +324,13 @@ void BuildReport(MsgData *report, int rank, const int coord[2], int available,
  * @param coord The 2D grid coordinates [row, column] of the current node.
  * @param avail An array containing the available port counts of the four neighboring nodes.
  */
-void LocalReferral(int rank, const int coord[2], const int avail[4]) {
+void LocalReferral(int rank, const int coord[2], const int avail[4], double *comp_time) {
+    double c_start = ComputationTime();
     const int dr[4] = {-1, 1, 0, 0}, dc[4] = {0, 0, -1, 1};
     int chosen = -1;
     for (int i = 0; i < 4; i++)
         if (avail[i] > THRESHOLD && (chosen < 0 || avail[i] > avail[chosen])) chosen = i;
+    *comp_time += ComputationTime() - c_start;
     if (chosen >= 0)
         printf("[Node %d] Refer EV to neighbour (%d,%d), free=%d\n",
                rank, coord[0] + dr[chosen], coord[1] + dc[chosen], avail[chosen]);
@@ -384,9 +429,7 @@ void AnswerNeighbours(MPI_Comm comm2D, int ports[NUM_PORTS], double *comp_time) 
     double elapsed = MPI_Wtime() - start;
     TrackReceiveMetric(MSG_REQ_NEIGHBOR, 1, sizeof(int), elapsed, elapsed);
     
-    double c_start = MPI_Wtime();
-    int available = AvailablePorts(ports);
-    *comp_time += MPI_Wtime() - c_start;
+    int available = AvailablePorts(ports, comp_time);
     
     start = MPI_Wtime();
     MPI_Send(&available, 1, MPI_INT, status.MPI_SOURCE, MSG_RES_NEIGHBOR, comm2D);
@@ -441,7 +484,7 @@ void BaseOpen(BaseState *base, int nrows, int ncols, int version) {
  * ports or contact these candidates to confirm their current availability.
  */
 int ProcessReport(BaseState *base, const MsgData *report, int *best_coords, double *comp_time) {
-    double c_start = MPI_Wtime();
+    double c_start = ComputationTime();
     int rows = base->nrows, cols = base->ncols;
     int row = report->coords[0], col = report->coords[1];
     if (row < 0 || row >= rows || col < 0 || col >= cols || report->avail_ports > THRESHOLD) {
@@ -510,6 +553,7 @@ int ProcessReport(BaseState *base, const MsgData *report, int *best_coords, doub
     }
 
     base->ttl_alerts++;
+    *comp_time += ComputationTime() - c_start;
     fprintf(base->log_file, "T:%.6fs | ALERT [%d] | Incident: %s | Rank: %d Coord: (%d,%d) | Ports Free: %d | Neighbor Free: [T:%d, B:%d, L:%d, R:%d] | Msgs: %d | Msg Size: %d Bytes\n",
             report->timestamp, base->ttl_alerts, report->incident_time, report->sender_rank, row, col,
             report->avail_ports, report->avail_neigh[0], report->avail_neigh[1],
@@ -520,7 +564,6 @@ int ProcessReport(BaseState *base, const MsgData *report, int *best_coords, doub
     fprintf(base->log_file, " | recent-neighbour shortcut=%d\n", degree > 0 && recent);
     fflush(base->log_file);
     
-    *comp_time += MPI_Wtime() - c_start;
     return found_count;
 }
 
@@ -615,8 +658,8 @@ void WriteMetrics(int rows, int cols, int version) {
  * @details
  * ### What it is:
  * A performance reduction utility executed by all slave nodes (charging stations) at the end of the simulation. 
- * It calculates each node's total execution time, precise communication overhead (by summing all 
- * blocked MPI send and receive call times from the `message_metrics` array), and the remaining computation time. 
+ * It records overall wall time, the instrumented MPI send/receive API wall time,
+ * and CPU time accumulated only inside computation sections. The metrics are not additive. 
  * 
  * ### What it is used for:
  * It uses `MPI_Reduce` to gather these individual timing metrics from the entire distributed grid and sends them 
@@ -626,7 +669,8 @@ void WriteMetrics(int rows, int cols, int version) {
  *
  * @param comm       The MPI communicator specifically isolating the slave nodes (charging stations).
  * @param start_time The absolute wall-clock time when the simulation started for this node.
- * @param comp_time  The aggregated pure computation time gathered accurately across all threads.
+ * @param comp_time  Computation-section CPU seconds summed across all station threads;
+ *                   excludes lock acquisition, output, MPI communication and sleep.
  */
 void PrintSlaveMetrics(MPI_Comm comm, double start_time, double comp_time) {
     double overall_time = MPI_Wtime() - start_time;
@@ -646,7 +690,7 @@ void PrintSlaveMetrics(MPI_Comm comm, double start_time, double comp_time) {
     MPI_Reduce(&comp_time, &sum_comp, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
 
     if (comm_rank == 0) {
-        printf("[Charging Nodes Average] Overall: %.4fs | Comm: %.4fs | Comp: %.4fs\n",
+        printf("[Charging Nodes Average] Overall: %.4fs | Comm: %.4fs | Comp: %.9fs\n",
                sum_overall / slave_size, sum_comm / slave_size, sum_comp / slave_size);
         fflush(stdout);
     }
@@ -658,9 +702,8 @@ void PrintSlaveMetrics(MPI_Comm comm, double start_time, double comp_time) {
  * @details
  * ### What it is:
  * A local performance profiling function executed exclusively by the Base Station (master node) upon 
- * simulation completion. It calculates the total elapsed time since initialization, aggregates the exact 
- * time blocked inside MPI functions to determine pure communication overhead, and derives the remaining 
- * computation time.
+ * simulation completion. It reports overall wall time, recorded send/receive API wall
+ * time, and separately accumulated computation-section CPU time.
  * 
  * ### What it is used for:
  * It is used to directly output the isolated operational metrics of the centralized Base Station to the console. 
@@ -669,7 +712,7 @@ void PrintSlaveMetrics(MPI_Comm comm, double start_time, double comp_time) {
  * bottleneck under heavy grid congestion.
  *
  * @param start_time The absolute wall-clock time when the simulation started for the Base Station.
- * @param comp_time  The aggregated pure computation time accurately accumulated during execution.
+ * @param comp_time  Base computation-section CPU seconds, excluding report logging.
  */
 void PrintMasterMetrics(double start_time, double comp_time) {
     double overall_time = MPI_Wtime() - start_time;
@@ -678,6 +721,6 @@ void PrintMasterMetrics(double start_time, double comp_time) {
         comm_time += message_metrics[i].send_call_time;
         comm_time += message_metrics[i].receive_call_time;
     }
-    printf("[Base Station] Overall: %.4fs | Comm: %.4fs | Comp: %.4fs\n", overall_time, comm_time, comp_time);
+    printf("[Base Station] Overall: %.4fs | Comm: %.4fs | Comp: %.9fs\n", overall_time, comm_time, comp_time);
     fflush(stdout);
 }

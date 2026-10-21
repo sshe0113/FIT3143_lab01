@@ -28,6 +28,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
     MPI_Type_size(report_type, &report_bytes);
     CreateGrid(comm, nrows, ncols, &comm2D, coord, neighbors);
     srand(time(NULL) + rank);
+
     /**
      * ### OpenMP Thread Initialization
      * Sets up the initial port states and spawns a designated number of OpenMP threads to execute concurrent tasks. 
@@ -47,6 +48,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
         // One thread checks the team size; the same value applies to every thread.
         if (thread_id == 0 && omp_get_num_threads() != NUM_PORTS + 1) MPI_Abort(world_comm, EXIT_FAILURE);
         double comp_time = 0.0;
+
         /**
          * ### Port State Simulation (Worker Threads)
          * These worker threads asynchronously simulate real-world electric vehicle behavior by randomly 
@@ -57,6 +59,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
         if (thread_id < NUM_PORTS) {
             SimulatePort(thread_id, ports, &running_flag, &comp_time);
         } else {
+
             /**
              * ### Main Thread: Centralized Scheduling Loop Setup
              * Initializes the control signal and flags for the blocking architecture.
@@ -103,9 +106,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                      * It ensures strictly serialized local congestion checking, forcing the node to execute blocking MPI_Send 
                      * and MPI_Recv sequentially to all neighbors, replacing parallel probing.
                      */
-                    double comp_s = MPI_Wtime();
-                    int available = AvailablePorts(ports);
-                    comp_time += MPI_Wtime() - comp_s;
+                    int available = AvailablePorts(ports, &comp_time);
                     if (available <= THRESHOLD) {
                         int avail_neigh[4] = {NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR, NO_NEIGHBOR};
                         int degree = 0;
@@ -130,16 +131,14 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                          * Conversely, if any neighbor is found to have available space, it bypasses the Base Station entirely and 
                          * directly invokes a local referral to redirect the EV traffic.
                          */
-                        comp_s = MPI_Wtime();
+                        double comp_s = ComputationTime();
                         bool all_full = true;
                         for (int i = 0; i < 4; i++) if (avail_neigh[i] > THRESHOLD) all_full = false;
-                        comp_time += MPI_Wtime() - comp_s;
+                        comp_time += ComputationTime() - comp_s;
 
                         if (all_full) {
-                            comp_s = MPI_Wtime();
                             MsgData report;
-                            BuildReport(&report, rank, coord, available, avail_neigh, degree, start_time);
-                            comp_time += MPI_Wtime() - comp_s;
+                            BuildReport(&report, rank, coord, available, avail_neigh, degree, start_time, &comp_time);
                             
                             start = MPI_Wtime();
                             MPI_Send(&report, 1, report_type, size-1, MSG_REPORT, world_comm);
@@ -165,13 +164,9 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
                                 elapsed = MPI_Wtime() - start;
                                 TrackReceiveMetric(MSG_BS_REPLY, 1, count*2*sizeof(int), elapsed, elapsed);
                             }
-                            comp_s = MPI_Wtime();
                             ShowReferral(rank, count, coords);
-                            comp_time += MPI_Wtime() - comp_s;
                         } else {
-                            comp_s = MPI_Wtime();
-                            LocalReferral(rank, coord, avail_neigh);
-                            comp_time += MPI_Wtime() - comp_s;
+                            LocalReferral(rank, coord, avail_neigh, &comp_time);
                         }
                     }
                     start = MPI_Wtime();
@@ -219,6 +214,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
     bool disabling = false, terminating = false, ready_seen[stations], ack_seen[stations];
     for (int i = 0; i < stations; i++) ready_seen[i] = ack_seen[i] = false;
     BaseState base;
+
     /**
      * ### Initialization of Global State Matrix and Log Files
      * This section initializes the global 2D matrix representing port availability and prepares the main simulation log file. 
@@ -250,6 +246,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
         MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, world_comm, &flag, &status);
         if (flag) {
             double start = MPI_Wtime();
+
             /**
              * ### Congestion Report Receipt and Status Updates
              * Intercepts congestion alerts, updates the central grid state, and validates 
@@ -266,6 +263,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
                 int coords[2*stations];
                 int count = ProcessReport(&base, &report, coords, &comp_time);
                 start = MPI_Wtime();
+
                 /**
                  * ### Sending Dispatch Responses and Grid Status Records
                  * Transmits the discovered alternative coordinates back to the reporting node 
@@ -287,6 +285,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
                 double elapsed = MPI_Wtime() - start;
                 TrackReceiveMetric(status.MPI_TAG, 1, sizeof(int), elapsed, elapsed);
                 int peer = status.MPI_SOURCE;
+                
                 /**
                  * ### Base Station: Query Completion Verification
                  * Retrieves the MSG_QUERY_DONE validation flag and systematically 

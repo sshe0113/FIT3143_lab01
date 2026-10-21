@@ -118,17 +118,18 @@ typedef struct {
 } BaseState;
 
 // Function Prototypes
+double ComputationTime(void);
 long ParseInteger(const char *text, long low, long high);
 void ReadArguments(int argc, char **argv, int size, int *nrows, int *ncols);
 void CreateDataType(MPI_Datatype *report_type);
 void CreateGrid(MPI_Comm comm, int nrows, int ncols, MPI_Comm *comm2D,
                 int coord[2], int neighbors[4]);
 void SimulatePort(int thread_id, int ports[NUM_PORTS], bool *running_flag, double *comp_time);
-int AvailablePorts(int ports[NUM_PORTS]);
+int AvailablePorts(int ports[NUM_PORTS], double *comp_time);
 void IncidentDateTime(char text[32]);
 void BuildReport(MsgData *report, int rank, const int coord[2], int available,
-                 const int avail_neigh[4], int degree, double start_time);
-void LocalReferral(int rank, const int coord[2], const int avail[4]);
+                 const int avail_neigh[4], int degree, double start_time, double *comp_time);
+void LocalReferral(int rank, const int coord[2], const int avail[4], double *comp_time);
 void ShowReferral(int rank, int count, const int *coords);
 void AnswerNeighbours(MPI_Comm comm2D, int ports[NUM_PORTS], double *comp_time);
 void TrackSendMetric(int tag, int messages, int payload_bytes, double call_time, double lifetime);
