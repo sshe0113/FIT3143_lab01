@@ -183,6 +183,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
     MPI_Send(&signal, 1, MPI_INT, size-1, MSG_TERMINATED, world_comm);
     double elapsed = MPI_Wtime() - start;
     TrackSendMetric(MSG_TERMINATED, 1, sizeof(int), elapsed, elapsed);
+    PrintSlaveMetrics(comm, start_time);
 }
 
 //===========================================
@@ -334,7 +335,9 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
      * It is used to safely clean up the MPI environment and append a comprehensive summary 
      * report regarding simulation overhead and event frequencies to the log file.
      */
+    double start_time_copy = base.start_time;
     BaseClose(&base);
+    PrintMasterMetrics(start_time_copy);
 }
 
 int main(int argc, char **argv) {

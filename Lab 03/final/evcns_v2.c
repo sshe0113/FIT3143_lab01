@@ -209,6 +209,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
     MPI_Send(&signal, 1, MPI_INT, size-1, MSG_TERMINATED, world_comm);
     double elapsed = MPI_Wtime() - start;
     TrackSendMetric(MSG_TERMINATED, 1, sizeof(int), elapsed, elapsed);
+    PrintSlaveMetrics(comm, start_time);
 }
 
 //===========================================
@@ -218,7 +219,7 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
     /**
      * ### Variable Initialization and Memory Allocation
      * Initializes the Base Station's core variables and allocates memory for tracking the shutdown states of all worker nodes. 
-     * It is used to set up the global tracking arrays and asynchronous request handles necessary for executing a synchronized 
+     * It is used to set up the global tracking arrays necessary for executing a synchronized 
      * simulation shutdown.
      */
     int size, report_bytes;
@@ -340,7 +341,10 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
         TrackSendMetric(MSG_DISABLE, 1, sizeof(int), 0, completed - started[i]);
         TrackSendMetric(MSG_TERMINATE, 1, sizeof(int), 0, completed - started[stations+i]);
     }
+    
+    double start_time_copy = base.start_time;
     BaseClose(&base);
+    PrintMasterMetrics(start_time_copy);
 }
 
 int main(int argc, char **argv) {

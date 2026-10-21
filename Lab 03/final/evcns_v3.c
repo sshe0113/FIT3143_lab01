@@ -317,6 +317,7 @@ void SlaveIO(MPI_Comm world_comm, MPI_Comm comm, int nrows, int ncols, MPI_Datat
     double called = MPI_Wtime() - start;
     MPI_Wait(&ack, MPI_STATUS_IGNORE);
     TrackSendMetric(MSG_TERMINATED, 1, sizeof(int), called, MPI_Wtime() - start);
+    PrintSlaveMetrics(comm, start_time);
 }
 
 //===========================================
@@ -471,7 +472,10 @@ void MasterIO(MPI_Comm world_comm, int nrows, int ncols, MPI_Datatype report_typ
      */
     for (int i = 0; i < stations; i++) free(peers[i].coords);
     free(peers);
+    
+    double start_time_copy = base.start_time;
     BaseClose(&base);
+    PrintMasterMetrics(start_time_copy);
 }
 
 int main(int argc, char **argv) {

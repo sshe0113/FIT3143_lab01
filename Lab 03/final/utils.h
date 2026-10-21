@@ -137,5 +137,7 @@ void WriteMetrics(int rows, int cols, int version);
 void BaseOpen(BaseState *base, int nrows, int ncols, int version);
 int ProcessReport(BaseState *base, const MsgData *report, int *best_coords);
 void BaseClose(BaseState *base);
+void PrintSlaveMetrics(MPI_Comm comm, double start_time);
+void PrintMasterMetrics(double start_time);
 
 #endif // EVCNS_UTILS_H

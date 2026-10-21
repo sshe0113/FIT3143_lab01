@@ -599,3 +599,76 @@ void WriteMetrics(int rows, int cols, int version) {
         fclose(file);
     }
 }
+
+/**
+ * @brief Aggregates and prints the average performance metrics across all charging nodes.
+ *
+ * @details
+ * ### What it is:
+ * A performance reduction utility executed by all slave nodes (charging stations) at the end of the simulation. 
+ * It calculates each node's total execution time, precise communication overhead (by summing all 
+ * blocked MPI send and receive call times from the `message_metrics` array), and the remaining computation time. 
+ * 
+ * ### What it is used for:
+ * It uses `MPI_Reduce` to gather these individual timing metrics from the entire distributed grid and sends them 
+ * to a designated root node (`comm_rank == 0`). The root node then calculates and prints the exact average 
+ * overall, communication, and computation times across the network. This provides the macro-level experimental 
+ * data required to justify the efficiency of the charging nodes' architecture in Task 3.
+ *
+ * @param comm       The MPI communicator specifically isolating the slave nodes (charging stations).
+ * @param start_time The absolute wall-clock time when the simulation started for this node.
+ */
+void PrintSlaveMetrics(MPI_Comm comm, double start_time) {
+    double overall_time = MPI_Wtime() - start_time;
+    double comm_time = 0.0;
+    for (int i = 1; i <= 10; i++) {
+        comm_time += message_metrics[i].send_call_time;
+        comm_time += message_metrics[i].receive_call_time;
+    }
+    double comp_time = overall_time - comm_time;
+
+    int comm_rank, slave_size;
+    MPI_Comm_rank(comm, &comm_rank);
+    MPI_Comm_size(comm, &slave_size);
+
+    double sum_overall = 0.0, sum_comm = 0.0, sum_comp = 0.0;
+    MPI_Reduce(&overall_time, &sum_overall, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
+    MPI_Reduce(&comm_time, &sum_comm, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
+    MPI_Reduce(&comp_time, &sum_comp, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
+
+    if (comm_rank == 0) {
+        printf("[Charging Nodes Average] Overall: %.4fs | Comm: %.4fs | Comp: %.4fs\n",
+               sum_overall / slave_size, sum_comm / slave_size, sum_comp / slave_size);
+        fflush(stdout);
+    }
+}
+
+/**
+ * @brief Calculates and prints the standalone performance metrics for the Base Station.
+ *
+ * @details
+ * ### What it is:
+ * A local performance profiling function executed exclusively by the Base Station (master node) upon 
+ * simulation completion. It calculates the total elapsed time since initialization, aggregates the exact 
+ * time blocked inside MPI functions to determine pure communication overhead, and derives the remaining 
+ * computation time.
+ * 
+ * ### What it is used for:
+ * It is used to directly output the isolated operational metrics of the centralized Base Station to the console. 
+ * By separating the Master's metrics from the Slaves', it allows you to precisely analyze whether the Base Station's 
+ * scheduling loop (V1/V2) or asynchronous event-driven state machine (V3) is acting as a computational or communicational 
+ * bottleneck under heavy grid congestion.
+ *
+ * @param start_time The absolute wall-clock time when the simulation started for the Base Station.
+ */
+void PrintMasterMetrics(double start_time) {
+    double overall_time = MPI_Wtime() - start_time;
+    double comm_time = 0.0;
+    for (int i = 1; i <= 10; i++) {
+        comm_time += message_metrics[i].send_call_time;
+        comm_time += message_metrics[i].receive_call_time;
+    }
+    double comp_time = overall_time - comm_time;
+    printf("[Base Station] Overall: %.4fs | Comm: %.4fs | Comp: %.4fs\n", overall_time, comm_time, comp_time);
+    fflush(stdout);
+}
