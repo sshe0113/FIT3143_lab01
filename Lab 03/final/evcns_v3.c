@@ -4,7 +4,7 @@
  *
  * @details   Implements an Advanced Fully Asynchronous Event-Driven Architecture.
  *            Features a persistent Peer state machine at the Base Station to track concurrent  
- *            requests without blocking. Achieves nearly all communication-computation overlap for 
+ *            requests without blocking. Achieves fully communication-computation overlap for 
  *            all grid-wide reports and routing recommendations.
  *
  * @author    Shee Seng Cheng (34612467) - sshe0113@student.monash.edu
