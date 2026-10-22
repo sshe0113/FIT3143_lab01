@@ -2,7 +2,10 @@
  * @file      evcns_v1.c
  * @brief     Electric Vehicle Charging Navigation System (EVCNS) Version 1
  *
- * @details
+ * @details   Implements a Scheduled Blocking Architecture. 
+ *            The Base Station acts as a centralized scheduler, granting tokens (MSG_QUERY_GRANT) 
+ *            to charging nodes round-robin to ensure strictly serialized, deadlock-free        
+ *            communication.
  *
  * @author    Shee Seng Cheng (34612467) - sshe0113@student.monash.edu
  * @author    Tay Chee Hsian (34612513) - ctay0040@student.monash.edu

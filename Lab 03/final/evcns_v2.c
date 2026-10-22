@@ -2,7 +2,10 @@
  * @file      evcns_v2.c
  * @brief     Electric Vehicle Charging Navigation System (EVCNS) Version 2
  *
- * @details
+ * @details   Implements an optimized Communication Overlap Architecture. 
+ *            Eliminates centralized token passing by allowing concurrent, non-blocking neighbor 
+ *            polling (MPI_Isend/Irecv). Nodes can process incoming peer requests while waiting 
+ *            for their own queries to resolve, effectively hiding network latency.
  *
  * @author    Shee Seng Cheng (34612467) - sshe0113@student.monash.edu
  * @author    Tay Chee Hsian (34612513) - ctay0040@student.monash.edu

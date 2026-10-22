@@ -2,7 +2,10 @@
  * @file      evcns_v3.c
  * @brief     Electric Vehicle Charging Navigation System (EVCNS) Version 3
  *
- * @details
+ * @details   Implements an Advanced Fully Asynchronous Event-Driven Architecture.
+ *            Features a persistent Peer state machine at the Base Station to track concurrent  
+ *            requests without blocking. Achieves nearly all communication-computation overlap for 
+ *            all grid-wide reports and routing recommendations.
  *
  * @author    Shee Seng Cheng (34612467) - sshe0113@student.monash.edu
  * @author    Tay Chee Hsian (34612513) - ctay0040@student.monash.edu
